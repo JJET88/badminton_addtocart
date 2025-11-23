@@ -21,7 +21,7 @@ const useCartStore = create((set, get) => ({
       return;
     }
     set((state) => ({ carts: [...state.carts, newCart] }));
-    toast.success("Item added to cart!");
+    // toast.success("Item added to cart!");
   },
 
   increaseQuantity: (cartId) => {

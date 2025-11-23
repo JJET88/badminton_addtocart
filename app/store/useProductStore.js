@@ -1,7 +1,7 @@
 import { create } from "zustand";
 
-
-
+// Optional: import your toast utility if available
+// import { showToast } from "@/utils/toast";
 
 const useProductStore = create((set) => ({
   products: [],
@@ -20,17 +20,19 @@ const useProductStore = create((set) => ({
         id: item.id,
         title: item.title,
         description: item.description,
-        price: parseFloat(item.price),
+        price: parseFloat(item.price) || 0,
         category: item.category,
         image: item.image,
-        rating_rate: item.rating_rate, // fix field name
-        rating_count: item.rating_count, // fix field name
+        rating_rate: parseFloat(item.rating_rate) || 0,
+        rating_count: parseInt(item.rating_count) || 0,
       }));
 
       set({ products: formattedData });
     } catch (error) {
       console.error("Error fetching products:", error);
-      showToast("❌ Failed to load products.", "error");
+      if (typeof showToast === "function") {
+        showToast("❌ Failed to load products.", "error");
+      }
     } finally {
       set({ loading: false });
     }
