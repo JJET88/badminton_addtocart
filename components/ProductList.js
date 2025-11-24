@@ -172,7 +172,7 @@ export default function ProductList() {
                     <div className="flex gap-1">
                       <Link 
                         href={`/products/${p.id}`} 
-                        className="p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                        className="p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700  hover:shadow-indigo-300/50 hover:scale-[1.03] active:scale-95 transition-all"
                         title="View"
                       >
                         view
@@ -187,7 +187,7 @@ export default function ProductList() {
 								) : (
 									<button
 										onClick={(e) => handleAddToCart(e, p.id)}
-										className=" text-sm border  px-3 py-3 text-white rounded-xl bg-blue-600"
+										className=" text-sm border  px-3 py-3 text-white rounded-xl bg-blue-600 hover:shadow-indigo-300/50 hover:scale-[1.03] active:scale-95 transition-all"
 									>
 										Add Cart
 									</button>

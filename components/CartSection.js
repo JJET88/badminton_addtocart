@@ -33,7 +33,7 @@ const CartSection = () => {
 	return (
 		<>
 			<div className=" bg-gray-50 min-h-screen ">
-				<section className="flex flex-col min-h-screen bg-gray-50   max-w-7xl mx-auto">
+				<section className="flex flex-col min-h-screen bg-gray-50   max-w-7xl mx-auto px-4 sm:px-6">
 					<CartHeader />
 					<PaymentSection />
 					{carts.length === 0 ? (

@@ -1,91 +1,101 @@
-/* eslint-disable @next/next/no-img-element */
+"use client";
+
+import { useState, Suspense } from "react";
+import { signIn } from "next-auth/react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import React from "react";
 
-export default function LoginForm() {
+function LoginForm() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const callbackUrl = searchParams.get("callbackUrl") || "/";
+
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [errorMsg, setErrorMsg] = useState("");
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+    setErrorMsg("");
+
+    const res = await signIn("credentials", {
+      email,
+      password,
+      redirect: false,
+      callbackUrl,
+    });
+
+    if (res.error) {
+      const errorMessages = {
+        "Invalid credentials": "Invalid email or password",
+        "Email and password are required":
+          "Please enter both email and password",
+        CredentialsSignin: "Invalid email or password",
+      };
+
+      setErrorMsg(errorMessages[res.error] || "An error occurred during login");
+    } else {
+      router.push(callbackUrl);
+    }
+  }
+
   return (
-    <div className="w-full min-h-screen flex items-center justify-center bg-transparent">
-      {/* Card */}
-      <div className="bg-white rounded-3xl shadow-xl p-8 w-[380px]">
+    <div className="min-h-screen flex items-center justify-center bg-gray-100 px-4">
+      <div className="w-full max-w-md bg-white rounded-xl shadow-xl p-8 animate-fadeIn">
+        <h1 className="text-2xl font-bold text-center mb-6">Login</h1>
 
-        {/* Title */}
-        <h1 className="text-3xl font-semibold mb-8">Sign in to your account</h1>
+        {errorMsg && (
+          <p className="text-red-600 mb-4 text-center">{errorMsg}</p>
+        )}
 
-        {/* Input Fields */}
-        <form>
-        <div className="space-y-5">
-
-          {/* Email */}
-          
-
-          
+        <form onSubmit={handleSubmit} className="space-y-4 mb-4">
           <div>
-            <label className="block text-sm font-medium mb-1">Your email</label>
+            <label className="block font-medium mb-1">Email</label>
             <input
               type="email"
+              className="w-full border rounded-lg px-3 py-2 focus:ring focus:ring-blue-200 outline-none"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="you@example.com"
               required
-              placeholder="name@company.com"
-              className="
-                w-full px-4 py-3
-                bg-gray-100 rounded-lg
-                focus:outline-none focus:ring-2 focus:ring-blue-400
-              "
             />
           </div>
 
-          {/* Password */}
           <div>
-            <label className="block text-sm font-medium mb-1">Password</label>
+            <label className="block font-medium mb-1">Password</label>
             <input
               type="password"
+              className="w-full border rounded-lg px-3 py-2 focus:ring focus:ring-blue-200 outline-none"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="••••••••"
               required
-              className="
-                w-full px-4 py-3
-                bg-gray-100 rounded-lg
-                focus:outline-none focus:ring-2 focus:ring-blue-400
-              "
             />
           </div>
 
-          {/* Remember me + Forgot password */}
-          <div className="flex items-center justify-between text-sm mt-1">
-            <div className="flex items-center gap-2">
-              <input type="checkbox" className="w-4 h-4" />
-              <span>Remember me</span>
-            </div>
+          <button
+            type="submit"
+            className="w-full bg-blue-600 text-white rounded-lg py-2 font-medium hover:bg-blue-700 hover:shadow-indigo-300/50 hover:scale-[1.03] active:scale-95 transition-all"
+          >
+            Login
+          </button>
+        </form>
 
-            <span className="text-blue-600 cursor-pointer">
-              Forgot password?
-            </span>
-          </div>
-        </div>
-        
-
-        {/* Sign In Button */}
-        <Link href={'/products'} >
-        <button
-          className="
-            w-full mt-8 py-3
-            bg-blue-600 text-white
-            rounded-lg
-            hover:bg-blue-700
-            transition
-          "
-        >
-          Sign in
-        </button>
-        </Link>
-</form>
-        {/* Footer — Sign up link */}
-        <p className="text-center text-sm mt-4">
-          Don’t have an account yet?{" "}
-          <a href="/register">
-
-          <span className="text-blue-600 cursor-pointer">Sign up</span>
-          </a>
+        <p className="text-center text-sm">
+          Don’t have an account?{" "}
+          <Link href="/register" className="text-blue-600 hover:underline">
+            Sign up
+          </Link>
         </p>
-
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="text-center mt-10">Loading...</div>}>
+      <LoginForm />
+    </Suspense>
   );
 }
