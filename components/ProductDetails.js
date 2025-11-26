@@ -145,7 +145,7 @@ export default function ProductDetails({ id }) {
               {/* Back */}
               <Link
                 href="/products"
-                className="flex-1 px-3 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 text-center hover:shadow-indigo-300/50 hover:scale-[1.03] active:scale-95 transition-all"
+                className="flex-1 px-3 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 hover:shadow-indigo-300/50 hover:scale-[1.03] active:scale-95 transition-all text-center"
               >
                 ← Back
               </Link>

@@ -12,11 +12,14 @@ function LoginForm() {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [rememberMe, setRememberMe] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
   async function handleSubmit(e) {
     e.preventDefault();
     setErrorMsg("");
+    setIsLoading(true);
 
     const res = await signIn("credentials", {
       email,
@@ -25,12 +28,13 @@ function LoginForm() {
       callbackUrl,
     });
 
+    setIsLoading(false);
+
     if (res.error) {
       const errorMessages = {
         "Invalid credentials": "Invalid email or password",
-        "Email and password are required":
-          "Please enter both email and password",
-        CredentialsSignin: "Invalid email or password",
+        "Email and password are required": "Please enter both email and password",
+        "CredentialsSignin": "Invalid email or password",
       };
 
       setErrorMsg(errorMessages[res.error] || "An error occurred during login");
@@ -40,53 +44,83 @@ function LoginForm() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100 px-4">
-      <div className="w-full max-w-md bg-white rounded-xl shadow-xl p-8 animate-fadeIn">
-        <h1 className="text-2xl font-bold text-center mb-6">Login</h1>
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl shadow-lg p-8 w-full max-w-md">
+        <h1 className="text-3xl font-bold text-gray-900 mb-8 text-center">
+          Sign in to your account
+        </h1>
 
         {errorMsg && (
-          <p className="text-red-600 mb-4 text-center">{errorMsg}</p>
+          <div className="mb-6 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+            {errorMsg}
+          </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-4 mb-4">
-          <div>
-            <label className="block font-medium mb-1">Email</label>
+        <form onSubmit={handleSubmit}>
+          <div className="mb-5">
+            <label className="block text-gray-900 font-medium mb-2">
+              Your email
+            </label>
             <input
               type="email"
-              className="w-full border rounded-lg px-3 py-2 focus:ring focus:ring-blue-200 outline-none"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@example.com"
+              placeholder="name@company.com"
               required
+              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 placeholder-gray-400"
             />
           </div>
 
-          <div>
-            <label className="block font-medium mb-1">Password</label>
+          <div className="mb-5">
+            <label className="block text-gray-900 font-medium mb-2">
+              Password
+            </label>
             <input
               type="password"
-              className="w-full border rounded-lg px-3 py-2 focus:ring focus:ring-blue-200 outline-none"
+              placeholder="••••••••"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
               required
+              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
             />
+          </div>
+
+          <div className="flex items-center justify-between mb-6">
+            <label className="flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
+                className="w-4 h-4 border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+              />
+              <span className="ml-2 text-gray-700">Remember me</span>
+            </label>
+            <Link
+              href="/forgot-password"
+              className="text-blue-600 hover:text-blue-700 font-medium text-sm"
+            >
+              Forgot password?
+            </Link>
           </div>
 
           <button
             type="submit"
-            className="w-full bg-blue-600 text-white rounded-lg py-2 font-medium hover:bg-blue-700 hover:shadow-indigo-300/50 hover:scale-[1.03] active:scale-95 transition-all"
+            disabled={isLoading}
+            className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 disabled:cursor-not-allowed hover:shadow-lg hover:scale-[1.02] active:scale-95 transition-all text-white font-medium py-3 px-4 rounded-lg mb-6"
           >
-            Login
+            {isLoading ? 'Signing in...' : 'Sign in'}
           </button>
-        </form>
 
-        <p className="text-center text-sm">
-          Don’t have an account?{" "}
-          <Link href="/register" className="text-blue-600 hover:underline">
-            Sign up
-          </Link>
-        </p>
+          <div className="text-center">
+            <span className="text-gray-600">Don't have an account yet? </span>
+            <Link
+              href="/register"
+              className="text-blue-600 hover:text-blue-700 font-medium"
+            >
+              Sign up
+            </Link>
+          </div>
+        </form>
       </div>
     </div>
   );
@@ -94,7 +128,11 @@ function LoginForm() {
 
 export default function LoginPage() {
   return (
-    <Suspense fallback={<div className="text-center mt-10">Loading...</div>}>
+    <Suspense fallback={
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-gray-600">Loading...</div>
+      </div>
+    }>
       <LoginForm />
     </Suspense>
   );

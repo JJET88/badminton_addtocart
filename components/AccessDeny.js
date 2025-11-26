@@ -2,19 +2,17 @@ import Link from "next/link";
 
 export default function AccessDeny() {
   return (
-    <div className="min-h-screen flex items-center justify-center  bg-gray-100 px-4 relative overflow-hidden p-4">
-
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4 relative overflow-hidden p-4">
       {/* Soft floating blobs */}
       <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute -top-32 -left-32 w-72 h-72v rounded-full mix-blend-multiply blur-2xl opacity-70 animate-blob" />
-        <div className="absolute -top-32 -right-32 w-72 h-72  bg-white rounded-full mix-blend-multiply blur-2xl opacity-70 animate-blob animation-delay-2000" />
-        <div className="absolute bottom-0 left-20 w-72 h-72 bg-white rounded-full mix-blend-multiply blur-2xl opacity-70 animate-blob animation-delay-4000" />
+        <div className="absolute -top-32 -left-32 w-72 h-72 bg-red-200 rounded-full mix-blend-multiply blur-2xl opacity-70 animate-blob" />
+        <div className="absolute -top-32 -right-32 w-72 h-72 bg-pink-200 rounded-full mix-blend-multiply blur-2xl opacity-70 animate-blob-delay-2" />
+        <div className="absolute bottom-0 left-20 w-72 h-72 bg-purple-200 rounded-full mix-blend-multiply blur-2xl opacity-70 animate-blob-delay-4" />
       </div>
 
       {/* Card */}
       <div className="relative z-10 w-full max-w-md">
-        <div className="bg-white/80 backdrop-blur-xl border border-white/50 rounded-2xl shadow-2xl p-10 text-center animate-fadeIn">
-
+        <div className="bg-white/90 backdrop-blur-xl border border-white/50 rounded-2xl shadow-2xl p-10 text-center">
           {/* Icon Box */}
           <div className="flex items-center justify-center mb-6">
             <div className="w-20 h-20 flex items-center justify-center bg-gradient-to-br from-red-500 to-pink-600 rounded-2xl shadow-lg transform transition hover:scale-110">
@@ -46,8 +44,7 @@ export default function AccessDeny() {
           {/* Button */}
           <Link
             href="/login"
-            className="inline-flex items-center gap-2 px-8 py-3 bg-blue-600 text-white rounded-lg font-semibold shadow-lg hover:shadow-indigo-300/50 hover:scale-[1.03] active:scale-95 transition-all"
-            // className="w-full bg-blue-600 text-white rounded-lg py-2 font-medium hover:bg-blue-700 transition"
+            className="inline-flex items-center gap-2 px-8 py-3 bg-blue-600 text-white rounded-lg font-semibold shadow-lg hover:bg-blue-700 hover:shadow-xl hover:scale-105 active:scale-95 transition-all"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -69,7 +66,7 @@ export default function AccessDeny() {
       {/* Animations */}
       <style jsx>{`
         @keyframes blob {
-          0% {
+          0%, 100% {
             transform: translate(0px, 0px) scale(1);
           }
           33% {
@@ -78,17 +75,19 @@ export default function AccessDeny() {
           66% {
             transform: translate(-20px, 20px) scale(0.9);
           }
-          100% {
-            transform: translate(0px, 0px) scale(1);
-          }
         }
+        
         .animate-blob {
           animation: blob 7s infinite;
         }
-        .animation-delay-2000 {
+        
+        .animate-blob-delay-2 {
+          animation: blob 7s infinite;
           animation-delay: 2s;
         }
-        .animation-delay-4000 {
+        
+        .animate-blob-delay-4 {
+          animation: blob 7s infinite;
           animation-delay: 4s;
         }
       `}</style>

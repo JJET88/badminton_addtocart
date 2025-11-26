@@ -7,8 +7,9 @@ import AccessDeny from '@/components/AccessDeny'
 export default function page() {
   return (
     <div>
+      {/* <AccessDeny/> */}
       <ProductList />
-     {/* <AccessDeny/> */}
+     
     </div>
   )
 }

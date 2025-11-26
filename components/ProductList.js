@@ -172,7 +172,7 @@ export default function ProductList() {
                     <div className="flex gap-1">
                       <Link 
                         href={`/products/${p.id}`} 
-                        className="p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700  hover:shadow-indigo-300/50 hover:scale-[1.03] active:scale-95 transition-all"
+                        className="p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 hover:shadow-lg hover:scale-[1.02] active:scale-95 transition-all"
                         title="View"
                       >
                         view
@@ -180,14 +180,14 @@ export default function ProductList() {
                       {carts.find((cart) => cart.productId === p.id) ? (
 									<button
 										onClick={(e) => handleAddedBtn(e)}
-										className=" text-sm border px-3 py-3 text-white rounded-xl bg-blue-900"
+										className=" text-sm border px-3 py-3 text-white rounded-xl bg-blue-900 hover:bg-blue-700 hover:shadow-lg hover:scale-[1.02] active:scale-95 transition-all"
 									>
 										Added
 									</button>
 								) : (
 									<button
 										onClick={(e) => handleAddToCart(e, p.id)}
-										className=" text-sm border  px-3 py-3 text-white rounded-xl bg-blue-600 hover:shadow-indigo-300/50 hover:scale-[1.03] active:scale-95 transition-all"
+										className=" text-sm border  px-3 py-3 text-white rounded-xl bg-blue-600 hover:bg-blue-700 hover:shadow-lg hover:scale-[1.02] active:scale-95 transition-all"
 									>
 										Add Cart
 									</button>

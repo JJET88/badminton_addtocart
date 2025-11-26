@@ -2,16 +2,7 @@ import { create } from "zustand";
 import toast from "react-hot-toast";
 
 const useCartStore = create((set, get) => ({
-  carts: [ {
-      id: 1,
-      productId: 19,
-      quantity: 3,
-    },
-    {
-      id: 2,
-      productId: 20,
-      quantity: 1,
-    },],
+  carts: [],
     //  addCart: (newCart) => set((state) => ({ carts: [...state.carts, newCart] })),
   addCart: (newCart) => {
     const { carts } = get();

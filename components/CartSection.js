@@ -15,7 +15,7 @@ import { useToggle } from "@/app/context/ToggleContext";
 const CartSection = () => {
 	const { carts } = useCartStore();
 	const { products, loading, fetchProducts } = useProductStore();
-	const { toggle, openSection } = useToggle();
+	const {  openSection } = useToggle();
 
 	useEffect(() => {
 		fetchProducts(); // call fetch on mount
@@ -33,7 +33,7 @@ const CartSection = () => {
 	return (
 		<>
 			<div className=" bg-gray-50 min-h-screen ">
-				<section className="flex flex-col min-h-screen bg-gray-50   max-w-7xl mx-auto px-4 sm:px-6">
+				<section className="flex flex-col min-h-screen bg-gray-50   max-w-7xl mx-auto">
 					<CartHeader />
 					<PaymentSection />
 					{carts.length === 0 ? (

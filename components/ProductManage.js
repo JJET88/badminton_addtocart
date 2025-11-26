@@ -103,7 +103,7 @@ export default function ProductManage() {
       
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 ">
-        {/* <CartHeader/> */}
+        <CartHeader/>
         {/* Search Bar with Create Button */}
         <div className="bg-white rounded-lg shadow-sm p-4 mb-6">
           <div className="flex flex-col sm:flex-row gap-3 mb-4">
@@ -121,7 +121,7 @@ export default function ProductManage() {
             </div>
             <Link
               href="/products/create"
-              className="px-5 py-2.5 bg-blue-600 text-white rounded-lg font-semibold hover:shadow-lg hover:bg-blue-700 hover:shadow-indigo-300/50 hover:scale-[1.03] active:scale-95 transition-all whitespace-nowrap flex items-center justify-center gap-2"
+              className="px-5 py-2.5 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 hover:shadow-lg hover:scale-[1.02] active:scale-95 transition-all whitespace-nowrap flex items-center justify-center gap-2"
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                 <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />

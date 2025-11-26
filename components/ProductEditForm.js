@@ -228,7 +228,7 @@ export default function ProductEditForm({ id }) {
             <button
               type="submit"
               disabled={isSubmitting}
-              className="w-full py-3 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 transition shadow-md flex justify-center items-center gap-2 disabled:bg-gray-400"
+              className="w-full py-3 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 hover:shadow-lg hover:scale-[1.02] active:scale-95 transition-allshadow-md flex justify-center items-center gap-2 disabled:bg-gray-400"
             >
               {isSubmitting && (
                 <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">

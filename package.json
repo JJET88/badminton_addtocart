@@ -1,14 +1,14 @@
 {
-	"name": "midterm_205",
-	"version": "0.1.0",
-	"private": true,
-	"scripts": {
-		"dev": "next dev --turbopack",
-		"build": "next build --turbopack",
-		"start": "next start",
-		"lint": "eslint"
-	},
-	"dependencies": {
+  "name": "midterm_205",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --turbopack",
+    "build": "next build --turbopack",
+    "start": "next start",
+    "lint": "eslint"
+  },
+ "dependencies": {
 		"@prisma/client": "^6.19.0",
 		"bcrypt": "^6.0.0",
 		"next": "15.5.0",
@@ -23,11 +23,11 @@
 		"sweetalert2": "^11.26.3",
 		"zustand": "^5.0.8"
 	},
-	"devDependencies": {
-		"@eslint/eslintrc": "^3",
-		"@tailwindcss/postcss": "^4",
-		"eslint": "^9",
-		"eslint-config-next": "15.5.4",
-		"tailwindcss": "^4"
-	}
+  "devDependencies": {
+    "@eslint/eslintrc": "^3",
+    "@tailwindcss/postcss": "^4",
+    "eslint": "^9",
+    "eslint-config-next": "15.5.4",
+    "tailwindcss": "^4"
+  }
 }
