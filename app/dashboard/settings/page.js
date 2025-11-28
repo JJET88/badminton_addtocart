@@ -1,16 +1,48 @@
-// app/dashboard/settings/page.js
 "use client";
-import { useState } from "react";
+
+import { useEffect, useState } from "react";
 
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState("profile");
+  const [loading, setLoading] = useState(true);
 
-  const tabs = [
-    { id: "profile", name: "Profile", icon: "👤" },
-    { id: "account", name: "Account", icon: "⚙️" },
-    { id: "notifications", name: "Notifications", icon: "🔔" },
-    { id: "security", name: "Security", icon: "🔒" },
-  ];
+  // FIXED: matched your real DB structure
+  const [user, setUser] = useState({
+    name: "",
+    email: "",
+    role: "",
+  });
+
+  // Fetch user (id=1 for now)
+  const fetchUser = async () => {
+    try {
+      const res = await fetch("/api/users/1"); // ⬅ change later for auth
+      const data = await res.json();
+      setUser({
+        name: data.name,
+        email: data.email,
+        role: data.role,
+      });
+      setLoading(false);
+    } catch (error) {
+      console.log("Error loading user:", error);
+    }
+  };
+
+  useEffect(() => {
+    fetchUser();
+  }, []);
+
+  // Save user updates
+  const handleSave = async () => {
+    const res = await fetch("/api/users/1", {
+      method: "PUT",
+      body: JSON.stringify(user),
+    });
+    alert(res.ok ? "Profile updated successfully!" : "Failed to update profile");
+  };
+
+  if (loading) return <p>Loading...</p>;
 
   return (
     <div>
@@ -18,7 +50,12 @@ export default function SettingsPage() {
 
       {/* Tabs */}
       <div className="flex gap-2 mb-6 border-b">
-        {tabs.map((tab) => (
+        {[
+          { id: "profile", name: "Profile", icon: "👤" },
+          { id: "account", name: "Account", icon: "⚙️" },
+          { id: "notifications", name: "Notifications", icon: "🔔" },
+          { id: "security", name: "Security", icon: "🔒" },
+        ].map((tab) => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
@@ -38,65 +75,39 @@ export default function SettingsPage() {
       {activeTab === "profile" && (
         <div className="bg-white rounded-lg shadow p-6">
           <h2 className="text-xl font-bold mb-6">Profile Information</h2>
-          <div className="space-y-4">
-            <div className="flex items-center gap-4 mb-6">
-              <div className="w-20 h-20 bg-gray-800 rounded-full flex items-center justify-center text-white text-2xl">
-                N
-              </div>
-              <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-                Change Photo
-              </button>
-            </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  First Name
-                </label>
-                <input
-                  type="text"
-                  defaultValue="Admin"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Last Name
-                </label>
-                <input
-                  type="text"
-                  defaultValue="User"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
-                />
-              </div>
-            </div>
+          <InputField
+            label="Name"
+            value={user.name}
+            onChange={(v) => setUser({ ...user, name: v })}
+          />
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Email Address
-              </label>
-              <input
-                type="email"
-                defaultValue="admin@example.com"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
-              />
-            </div>
+          <InputField
+            label="Email"
+            type="email"
+            value={user.email}
+            onChange={(v) => setUser({ ...user, email: v })}
+          />
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Phone Number
-              </label>
-              <input
-                type="tel"
-                defaultValue="+1 234 567 8900"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
-              />
-            </div>
-
-            <button className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700">
-              Save Changes
-            </button>
+          <div className="mb-4">
+            <label className="block text-sm font-medium mb-1">Role</label>
+            <select
+              value={user.role}
+              onChange={(e) => setUser({ ...user, role: e.target.value })}
+              className="w-full px-4 py-2 border rounded-lg"
+            >
+              <option value="admin">Admin</option>
+              <option value="cashier">Cashier</option>
+              <option value="other">Other</option>
+            </select>
           </div>
+
+          <button
+            className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 mt-4"
+            onClick={handleSave}
+          >
+            Save Changes
+          </button>
         </div>
       )}
 
@@ -104,135 +115,144 @@ export default function SettingsPage() {
       {activeTab === "account" && (
         <div className="bg-white rounded-lg shadow p-6">
           <h2 className="text-xl font-bold mb-6">Account Settings</h2>
-          <div className="space-y-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Store Name
-              </label>
-              <input
-                type="text"
-                defaultValue="My Store"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
-              />
-            </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Currency
-              </label>
-              <select className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500">
-                <option>USD - US Dollar</option>
-                <option>EUR - Euro</option>
-                <option>GBP - British Pound</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Time Zone
-              </label>
-              <select className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500">
-                <option>UTC-5 (Eastern Time)</option>
-                <option>UTC-8 (Pacific Time)</option>
-                <option>UTC+0 (GMT)</option>
-              </select>
-            </div>
-
-            <button className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700">
-              Save Settings
-            </button>
-          </div>
+          <p className="text-gray-600 mb-4">
+            Account management features can be added here (store name, currency, etc.)
+          </p>
         </div>
       )}
 
       {/* Notifications Tab */}
       {activeTab === "notifications" && (
         <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-xl font-bold mb-6">Notification Preferences</h2>
-          <div className="space-y-4">
-            {[
-              { label: "New Order Notifications", description: "Get notified when you receive new orders" },
-              { label: "Low Stock Alerts", description: "Receive alerts when products are running low" },
-              { label: "Customer Messages", description: "Get notified of new customer messages" },
-              { label: "Sales Reports", description: "Receive daily sales summary reports" },
-              { label: "Marketing Updates", description: "Get updates about promotions and campaigns" },
-            ].map((item, index) => (
-              <div key={index} className="flex items-center justify-between py-3 border-b">
-                <div>
-                  <p className="font-medium">{item.label}</p>
-                  <p className="text-sm text-gray-600">{item.description}</p>
-                </div>
-                <label className="relative inline-block w-12 h-6">
-                  <input type="checkbox" className="sr-only peer" defaultChecked={index < 3} />
-                  <span className="absolute cursor-pointer inset-0 bg-gray-300 rounded-full peer-checked:bg-blue-600 transition-colors"></span>
-                  <span className="absolute left-1 top-1 w-4 h-4 bg-white rounded-full transition-transform peer-checked:translate-x-6"></span>
-                </label>
-              </div>
-            ))}
-          </div>
+          <h2 className="text-xl font-bold mb-6">Notifications</h2>
+
+          <ToggleItem label="New order notifications" />
+          <ToggleItem label="Low stock alerts" />
+          <ToggleItem label="Daily sales summary" />
         </div>
       )}
 
       {/* Security Tab */}
       {activeTab === "security" && (
         <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-xl font-bold mb-6">Security Settings</h2>
-          <div className="space-y-6">
-            <div>
-              <h3 className="font-medium mb-4">Change Password</h3>
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Current Password
-                  </label>
-                  <input
-                    type="password"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    New Password
-                  </label>
-                  <input
-                    type="password"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Confirm New Password
-                  </label>
-                  <input
-                    type="password"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
-                  />
-                </div>
-                <button className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700">
-                  Update Password
-                </button>
-              </div>
-            </div>
+          <h2 className="text-xl font-bold mb-6">Security</h2>
 
-            <div className="border-t pt-6">
-              <h3 className="font-medium mb-4">Two-Factor Authentication</h3>
-              <p className="text-gray-600 mb-4">
-                Add an extra layer of security to your account
-              </p>
-              <button className="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700">
-                Enable 2FA
-              </button>
-            </div>
-
-            <div className="border-t pt-6">
-              <h3 className="font-medium mb-4 text-red-600">Danger Zone</h3>
-              <button className="bg-red-600 text-white px-6 py-2 rounded-lg hover:bg-red-700">
-                Delete Account
-              </button>
-            </div>
-          </div>
+          <PasswordChangeForm />
         </div>
       )}
+    </div>
+  );
+}
+
+/* ----------- REUSABLE COMPONENTS ----------- */
+
+function InputField({ label, value, onChange, type = "text" }) {
+  return (
+    <div className="mb-4">
+      <label className="block text-sm font-medium mb-1">{label}</label>
+      <input
+        type={type}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full px-4 py-2 border rounded-lg"
+      />
+    </div>
+  );
+}
+
+function ToggleItem({ label }) {
+  return (
+    <div className="flex items-center justify-between py-3 border-b">
+      <p>{label}</p>
+      <input type="checkbox" defaultChecked className="w-5 h-5" />
+    </div>
+  );
+}
+
+function PasswordChangeForm() {
+  const [passwords, setPasswords] = useState({
+    current: "",
+    new: "",
+    confirm: "",
+  });
+  const [error, setError] = useState("");
+
+  const handlePasswordChange = async () => {
+    setError("");
+
+    // Validation
+    if (!passwords.current || !passwords.new || !passwords.confirm) {
+      setError("All fields are required");
+      return;
+    }
+
+    if (passwords.new.length < 6) {
+      setError("New password must be at least 6 characters");
+      return;
+    }
+
+    if (passwords.new !== passwords.confirm) {
+      setError("New passwords do not match");
+      return;
+    }
+
+    try {
+      const res = await fetch("/api/users/1/password", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          currentPassword: passwords.current,
+          newPassword: passwords.new,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        alert("Password updated successfully!");
+        setPasswords({ current: "", new: "", confirm: "" });
+      } else {
+        setError(data.error || "Failed to update password");
+      }
+    } catch (error) {
+      setError("An error occurred. Please try again.");
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      {error && (
+        <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm">
+          {error}
+        </div>
+      )}
+
+      <InputField
+        label="Current Password"
+        type="password"
+        value={passwords.current}
+        onChange={(v) => setPasswords({ ...passwords, current: v })}
+      />
+      <InputField
+        label="New Password"
+        type="password"
+        value={passwords.new}
+        onChange={(v) => setPasswords({ ...passwords, new: v })}
+      />
+      <InputField
+        label="Confirm New Password"
+        type="password"
+        value={passwords.confirm}
+        onChange={(v) => setPasswords({ ...passwords, confirm: v })}
+      />
+
+      <button
+        className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700"
+        onClick={handlePasswordChange}
+      >
+        Update Password
+      </button>
     </div>
   );
 }

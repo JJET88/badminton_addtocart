@@ -12,11 +12,10 @@ export default function ProductEditForm({ id }) {
   const [form, setForm] = useState({
     title: "",
     price: "",
-    description: "",
+    stock: "",
     category: "",
     image: "",
-    rate: "",
-    count: "",
+
   });
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -38,11 +37,10 @@ export default function ProductEditForm({ id }) {
         setForm({
           title: data.title || "",
           price: data.price || "",
-          description: data.description || "",
+          stock: data.stock || "",
           category: data.category || "",
           image: data.image || "",
-          rate: data.rating_rate || "",
-          count: data.rating_count || "",
+        
         });
       } catch (err) {
         console.error(err);
@@ -69,11 +67,10 @@ export default function ProductEditForm({ id }) {
       const payload = {
         title: form.title,
         price: parseFloat(form.price),
-        description: form.description,
+        stock: form.stock,
         category: form.category,
         image: form.image,
-        rating_rate: parseFloat(form.rate),
-        rating_count: parseInt(form.count, 10),
+       
       };
 
       const method = id ? "PUT" : "POST";
@@ -88,7 +85,7 @@ export default function ProductEditForm({ id }) {
       if (!res.ok) throw new Error("Failed to save product");
 
       showToast(`✅ Product ${id ? "updated" : "created"} successfully!`, "success");
-      router.push("/products");
+      router.push("/dashboard/products");
     } catch (err) {
       console.error(err);
       showToast("❌ Failed to save product.", "error");
@@ -125,21 +122,8 @@ export default function ProductEditForm({ id }) {
             />
           </div>
 
-          {/* Description */}
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1">Description</label>
-            <textarea
-              name="description"
-              rows="4"
-              value={form.description}
-              onChange={handleChange}
-              required
-              className="w-full px-4 py-2 border rounded-xl shadow-sm focus:ring-2 focus:ring-blue-400 resize-none transition"
-            />
-          </div>
-
           {/* Price & Category */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-1">Price (USD)</label>
               <input
@@ -147,6 +131,18 @@ export default function ProductEditForm({ id }) {
                 type="number"
                 step="0.01"
                 value={form.price}
+                onChange={handleChange}
+                required
+                className="w-full px-4 py-2 border rounded-xl shadow-sm focus:ring-2 focus:ring-blue-400 transition"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1">Stock</label>
+              <input
+                name="stock"
+                type="number"
+                step="1"
+                value={form.stock}
                 onChange={handleChange}
                 required
                 className="w-full px-4 py-2 border rounded-xl shadow-sm focus:ring-2 focus:ring-blue-400 transition"
@@ -162,10 +158,9 @@ export default function ProductEditForm({ id }) {
                 className="w-full px-4 py-2 border rounded-xl shadow-sm focus:ring-2 focus:ring-blue-400 transition"
               >
                 <option value="">-- Select Category --</option>
-                <option value="men's clothing">Men&apos;s Clothing</option>
-                <option value="women's clothing">Women&apos;s Clothing</option>
-                <option value="jewelery">Jewelery</option>
-                <option value="electronics">Electronics</option>
+                <option value="Badminton Racket">Badminton Racket</option>
+                <option value="Shoes">Shoes</option>
+                <option value="Bags">Bags</option>
               </select>
             </div>
           </div>
@@ -193,35 +188,7 @@ export default function ProductEditForm({ id }) {
             )}
           </div>
 
-          {/* Rating */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1">Rate (0-5)</label>
-              <input
-                name="rate"
-                type="number"
-                step="0.1"
-                min="0"
-                max="5"
-                value={form.rate}
-                onChange={handleChange}
-                required
-                className="w-full px-4 py-2 border rounded-xl shadow-sm focus:ring-2 focus:ring-blue-400 transition"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1">Count</label>
-              <input
-                name="count"
-                type="number"
-                min="0"
-                value={form.count}
-                onChange={handleChange}
-                required
-                className="w-full px-4 py-2 border rounded-xl shadow-sm focus:ring-2 focus:ring-blue-400 transition"
-              />
-            </div>
-          </div>
+        
 
           {/* Submit */}
           <div>

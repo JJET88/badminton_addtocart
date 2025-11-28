@@ -36,7 +36,6 @@ const Cart = ({ cart: { id, productId, quantity } }) => {
       }).then((res) => {
         if (res.isConfirmed) {
           removeCart(id);
-          toast.success("Item removed!");
         }
       });
     }

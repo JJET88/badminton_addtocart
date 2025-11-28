@@ -22,7 +22,11 @@ export default function ProductDetails({ id }) {
     fetch(`/api/products/${id}`)
       .then((res) => res.json())
       .then((data) => {
-        setProduct(data);
+        if (data?.message === "Product not found") {
+          setProduct(null);
+        } else {
+          setProduct(data);
+        }
         setLoading(false);
       })
       .catch(() => {
@@ -49,36 +53,6 @@ export default function ProductDetails({ id }) {
     );
   }
 
-  // ⭐⭐⭐ RENDER STARS FIXED
-  const renderStars = (rate) => {
-    const fullStars = Math.floor(rate);
-    const halfStar = rate % 1 >= 0.5;
-    const emptyStars = 5 - fullStars - (halfStar ? 1 : 0);
-
-    return (
-      <div className="flex items-center gap-1">
-        {Array(fullStars)
-          .fill(0)
-          .map((_, i) => (
-            <span key={`full-${i}`} className="text-yellow-400">
-              ★
-            </span>
-          ))}
-        {halfStar && <span className="text-yellow-400">☆</span>}
-        {Array(emptyStars)
-          .fill(0)
-          .map((_, i) => (
-            <span key={`empty-${i}`} className="text-gray-300">
-              ★
-            </span>
-          ))}
-        <span className="text-gray-600 ml-2 text-sm">
-          ({product.rating_count || 0} reviews)
-        </span>
-      </div>
-    );
-  };
-
   // 🛒 ADD TO CART
   const handleAddToCart = (e, productId) => {
     e.stopPropagation();
@@ -91,14 +65,16 @@ export default function ProductDetails({ id }) {
       id: Date.now(),
       productId,
       quantity: 1,
+      title: product.title,
+      price: product.price,
+      image: product.image,
     });
 
-    showToast("Added to cart!", "success");
   };
 
   return (
     <div className="flex justify-center items-center min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-100 p-6">
-      <div className="bg-white shadow-2xl rounded-3xl overflow-hidden w-full max-w-5xl transition-all duration-300 hover:shadow-3xl">
+      <div className="bg-white shadow-2xl rounded-3xl overflow-hidden w-full max-w-5xl">
 
         {/* Header */}
         <div className="p-6 border-b bg-gradient-to-r from-blue-600 to-indigo-500 text-white text-center">
@@ -130,14 +106,16 @@ export default function ProductDetails({ id }) {
               </span>
             </p>
 
-            {renderStars(product.rating_rate || 0)}
-
-            <p className="text-gray-700 leading-relaxed">
-              {product.description}
-            </p>
 
             <p className="text-2xl font-bold text-blue-700">
-              💵 ${product.price}
+              💵 ฿{product.price}
+            </p>
+
+            <p className="text-gray-500 text-sm">
+              Stock:{" "}
+              <span className={product.stock > 0 ? "text-green-600" : "text-red-600"}>
+                {product.stock > 0 ? product.stock : "Out of stock"}
+              </span>
             </p>
 
             <div className="flex flex-wrap gap-3 mt-6">
@@ -145,25 +123,22 @@ export default function ProductDetails({ id }) {
               {/* Back */}
               <Link
                 href="/products"
-                className="flex-1 px-3 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 hover:shadow-indigo-300/50 hover:scale-[1.03] active:scale-95 transition-all text-center"
+                className="flex-1 px-3 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition text-center"
               >
                 ← Back
               </Link>
 
-          
-
-              {/* Add to Cart / Added */}
-              {carts.find((cart) => cart.productId === id) ? (
+              {/* Add to Cart */}
+              {carts.find((cart) => cart.productId === product.id) ? (
                 <button
-                  onClick={(e) => e.stopPropagation()}
                   className="flex-1 px-3 py-3 bg-blue-900 text-white rounded-xl cursor-not-allowed"
                 >
                   Added
                 </button>
               ) : (
                 <button
-                  onClick={(e) => handleAddToCart(e, id)}
-                  className="flex-1 px-3 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 hover:shadow-indigo-300/50 hover:scale-[1.03] active:scale-95 transition-all"
+                  onClick={(e) => handleAddToCart(e, product.id)}
+                  className="flex-1 px-3 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition"
                 >
                   🛒 Add Cart
                 </button>

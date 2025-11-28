@@ -1,35 +1,33 @@
 import { NextResponse } from "next/server";
 import { mysqlPool } from "@/utils/db";
 
-// GET /api/attractions
+// GET all products
 export async function GET() {
   const promisePool = mysqlPool.promise();
-  const [rows] = await promisePool.query(`SELECT * FROM badminton;`);
+  const [rows] = await promisePool.query(`SELECT * FROM products;`);
   return NextResponse.json(rows);
 }
 
-// POST /api/attractions  -> Create
+// POST create product
 export async function POST(request) {
   try {
     const body = await request.json();
-    const { title, price, description, category, image, rating_rate, rating_count } = body;
-    
+    const { title, price, stock, category, image } = body;
+
     const promisePool = mysqlPool.promise();
     const [result] = await promisePool.query(
-      `INSERT INTO tawbayin ( title, price, description, category, image, rating_rate, rating_count)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
-       [title, price, description, category, image, rating_rate, rating_count]
-    )
+      `INSERT INTO products (title, price, stock, category, image)
+       VALUES (?, ?, ?, ?, ?)`,
+      [title, price, stock, category, image]
+    );
 
     const [rows] = await promisePool.query(
-      `SELECT * FROM badminton WHERE id = ?`,
+      `SELECT * FROM products WHERE id = ?`,
       [result.insertId]
-    )
-    return NextResponse.json(rows[0], { status: 201 })
+    );
+
+    return NextResponse.json(rows[0], { status: 201 });
   } catch (e) {
-    return NextResponse.json(
-      { error: e.message },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: e.message }, { status: 500 });
   }
 }

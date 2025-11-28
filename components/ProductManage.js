@@ -4,34 +4,44 @@ import Link from "next/link";
 import React, { useState, useEffect, useMemo } from "react";
 import Header from "./Header";
 import CartHeader from "./CartHeader";
+import useProductStore from "@/app/store/useProductStore";
 
 const showToast = (message, type) => {
   console.log(`[${type}] ${message}`);
 };
 
 export default function ProductManage() {
-  const [products, setProducts] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  
+  // const [products, setProducts] = useState([]);
+  // const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
-  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(5);
+  const { products, loading, fetchProducts } = useProductStore();
 
-  const productsPerPage = 6;
 
-  const fetchProducts = async () => {
-    setLoading(true);
-    try {
-      const res = await fetch("/api/products");
-      if (!res.ok) throw new Error("Failed to fetch products.");
-      const data = await res.json();
-      setProducts(data || []);
-    } catch (err) {
-      console.error("Error fetching products:", err);
-      showToast("❌ Failed to load products.", "error");
-    } finally {
-      setLoading(false);
-    }
-  };
+
+  // const fetchProducts = async () => {
+  //   setLoading(true);
+  //   try {
+  //     const res = await fetch("/api/products");
+  //     if (!res.ok) throw new Error("Failed to fetch products.");
+  //     const data = await res.json();
+  //     setProducts(data || []);
+  //   } catch (err) {
+  //     console.error("Error fetching products:", err);
+  //     showToast("❌ Failed to load products.", "error");
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
+    useEffect(() => {
+      fetchProducts();
+    }, [fetchProducts]);
+   useEffect(() => {
+      setCurrentPage(1);
+    }, [search, selectedCategory]);
 
   const handleDelete = async (id) => {
     if (!confirm("Are you sure you want to delete this product?")) return;
@@ -70,15 +80,18 @@ export default function ProductManage() {
     if (selectedCategory !== "All") {
       list = list.filter((p) => p.category === selectedCategory);
     }
-    setCurrentPage(1);
+    
     return list;
   }, [products, search, selectedCategory]);
 
-  const totalPages = Math.ceil(filteredProducts.length / productsPerPage);
-  const startIndex = (currentPage - 1) * productsPerPage;
+ const goNext = () => currentPage < totalPages && setCurrentPage((p) => p + 1);
+  const goPrev = () => currentPage > 1 && setCurrentPage((p) => p - 1);
+
+ const totalPages = Math.ceil(products.length / pageSize);
+  const startIndex = (currentPage - 1) * pageSize;
   const currentProducts = filteredProducts.slice(
     startIndex,
-    startIndex + productsPerPage
+    startIndex + pageSize
   );
 
   if (loading)
@@ -97,13 +110,13 @@ export default function ProductManage() {
     );
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-indigo-50">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-indigo-50 ">
       {/* Hero Header */}
     
       
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 ">
-        <CartHeader/>
+      <div className=" mx-auto ">
+        {/* <CartHeader/> */}
         {/* Search Bar with Create Button */}
         <div className="bg-white rounded-lg shadow-sm p-4 mb-6">
           <div className="flex flex-col sm:flex-row gap-3 mb-4">
@@ -194,7 +207,7 @@ export default function ProductManage() {
                       ${p.price}
                     </span>
                     <div className="flex gap-1">
-                      <Link 
+                      {/* <Link 
                         href={`/products/${p.id}`} 
                         className="p-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
                         title="View"
@@ -203,7 +216,7 @@ export default function ProductManage() {
                           <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.575 3.01 9.963 7.181a1.012 1.012 0 010 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.575-3.01-9.963-7.181z" />
                           <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                         </svg>
-                      </Link>
+                      </Link> */}
                       <Link 
                         href={`/products/${p.id}/edit`} 
                         className="p-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
@@ -241,29 +254,47 @@ export default function ProductManage() {
         )}
 
         {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="mt-8 flex justify-center items-center gap-3">
-            <button
-              disabled={currentPage === 1}
-              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-              className="px-4 py-2 bg-white border border-gray-300 rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 transition-colors"
-            >
-              Previous
-            </button>
-            
-            <span className="text-sm text-gray-600 font-medium">
-              Page {currentPage} of {totalPages}
-            </span>
+        <div className="flex justify-between items-center mt-6">
+        {/* Page size selection */}
+        <div>
+          <label className="mr-2 text-gray-600">Rows per page:</label>
+          <select
+            value={pageSize}
+            onChange={(e) => {
+              setPageSize(Number(e.target.value));
+              setCurrentPage(1); // reset page
+            }}
+            className="border px-3 py-1 rounded"
+          >
+            <option value={4}>4</option>
+            <option value={6}>6</option>
+            <option value={8}>8</option>
+          </select>
+        </div>
 
-            <button
-              disabled={currentPage === totalPages}
-              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-              className="px-4 py-2 bg-white border border-gray-300 rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 transition-colors"
-            >
-              Next
-            </button>
-          </div>
-        )}
+        {/* Prev / Next */}
+        <div className="flex items-center gap-3">
+          <button
+            onClick={goPrev}
+            disabled={currentPage === 1}
+            className="px-4 py-2 bg-gray-200 rounded disabled:opacity-50"
+          >
+            Previous
+          </button>
+
+          <span className="text-gray-700">
+            Page {currentPage} of {totalPages}
+          </span>
+
+          <button
+            onClick={goNext}
+            disabled={currentPage === totalPages}
+            className="px-4 py-2 bg-gray-200 rounded disabled:opacity-50"
+          >
+            Next
+          </button>
+        </div>
+      </div>
       </div>
     </div>
   );
