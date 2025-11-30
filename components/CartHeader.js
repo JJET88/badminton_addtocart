@@ -36,11 +36,11 @@ export default function CartHeader() {
         </Link>
 
         {/* Profile Button */}
-        <Link href="/login">
+        {/* <Link href="/login">
           <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center cursor-pointer">
             <CgProfile className="text-4xl text-black" />
           </div>
-        </Link>
+        </Link> */}
       </div>
     </header>
   )

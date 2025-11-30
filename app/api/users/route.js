@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { mysqlPool } from "@/utils/db";
-import bcrypt from "bcryptjs";
+import bcrypt from "bcrypt";
 
 // GET all users
 export async function GET() {

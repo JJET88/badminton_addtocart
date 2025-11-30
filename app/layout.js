@@ -1,7 +1,7 @@
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "react-hot-toast";
-import { ToggleProvider } from "./context/ToggleContext";
+import { ToggleProvider } from "../context/ToggleContext";
 import Providers from "./providers";
 
 const geistSans = Geist({
@@ -23,14 +23,12 @@ export default function RootLayout({ children }) {
 	return (
 		<html lang="en">
 			<ToggleProvider>
-
-			
-			<body
-				className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-			>
-			<Providers>{children}</Providers>
-				 <Toaster reverseOrder={false} />
-			</body>
+				<body
+					className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+				>
+					<Providers>{children}</Providers>
+					<Toaster reverseOrder={false} />
+				</body>
 			</ToggleProvider>
 		</html>
 	);
