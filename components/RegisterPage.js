@@ -1,15 +1,11 @@
 "use client";
-
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
 export default function RegisterPage() {
   const router = useRouter();
-
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [form, setForm] = useState({ name: "", email: "", password: "", role: "user" });
   const [msg, setMsg] = useState("");
   const [err, setErr] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -23,13 +19,15 @@ export default function RegisterPage() {
     const res = await fetch("/api/auth/register", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, email, password }),
+      body: JSON.stringify(form),
     });
 
     const data = await res.json();
     setIsLoading(false);
 
-    if (!res.ok) return setErr(data.message);
+    if (!res.ok) {
+      return setErr(data.message || "Registration failed");
+    }
 
     setMsg("Account created successfully! Redirecting to Login...");
     setTimeout(() => router.push("/login"), 1000);
@@ -61,8 +59,8 @@ export default function RegisterPage() {
             </label>
             <input
               type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
+              value={form.name}
+              onChange={(e) => setForm({ ...form, name: e.target.value })}
               placeholder="John Doe"
               required
               className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 placeholder-gray-400"
@@ -75,9 +73,23 @@ export default function RegisterPage() {
             </label>
             <input
               type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              value={form.email}
+              onChange={(e) => setForm({ ...form, email: e.target.value })}
               placeholder="name@company.com"
+              required
+              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 placeholder-gray-400"
+            />
+          </div>
+
+          <div className="mb-5">
+            <label className="block text-gray-900 font-medium mb-2">
+              Password
+            </label>
+            <input
+              type="password"
+              value={form.password}
+              onChange={(e) => setForm({ ...form, password: e.target.value })}
+              placeholder="••••••••"
               required
               className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 placeholder-gray-400"
             />
@@ -85,22 +97,23 @@ export default function RegisterPage() {
 
           <div className="mb-6">
             <label className="block text-gray-900 font-medium mb-2">
-              Password
+              Role
             </label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
-              required
-              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 placeholder-gray-400"
-            />
+            <select
+              value={form.role}
+              onChange={(e) => setForm({ ...form, role: e.target.value })}
+              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+            >
+              <option value="user">User</option>
+              <option value="user">Cashier</option>
+              <option value="admin">Admin</option>
+            </select>
           </div>
 
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full bg-blue-600  disabled:bg-blue-400 disabled:cursor-not-allowed hover:bg-blue-700 hover:shadow-lg hover:scale-[1.02] active:scale-95 transition-all text-white font-medium py-3 px-4 rounded-lg mb-6"
+            className="w-full bg-blue-600 disabled:bg-blue-400 disabled:cursor-not-allowed hover:bg-blue-700 hover:shadow-lg hover:scale-[1.02] active:scale-95 transition-all text-white font-medium py-3 px-4 rounded-lg mb-6"
           >
             {isLoading ? 'Creating account...' : 'Create account'}
           </button>

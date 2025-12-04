@@ -5,7 +5,7 @@ import { mysqlPool } from "@/utils/db";
 export async function GET(_req, { params }) {
   try {
     const { id } = await params; // Add await
-    const db = mysqlPool.promise();
+    const db = mysqlPool
 
     const [rows] = await db.query(`SELECT * FROM sales WHERE id = ?`, [id]);
     if (rows.length === 0)
@@ -24,7 +24,7 @@ export async function PUT(request, { params }) {
     const { total, subtotal, tax, paymentType, voucherCode, cashierId } =
       await request.json();
 
-    const db = mysqlPool.promise();
+    const db = mysqlPool
 
     const [exists] = await db.query(`SELECT id FROM sales WHERE id = ?`, [id]);
     if (exists.length === 0)
@@ -48,7 +48,7 @@ export async function PUT(request, { params }) {
 export async function DELETE(_req, { params }) {
   try {
     const { id } = await params; // Add await
-    const db = mysqlPool.promise();
+    const db = mysqlPool
 
     const [exists] = await db.query(`SELECT id FROM sales WHERE id = ?`, [id]);
     if (exists.length === 0)

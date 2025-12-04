@@ -1,37 +1,46 @@
-import prisma from "@/lib/prisma";
-import bcrypt from "bcrypt";
-
+import { NextResponse } from "next/server";
+import bcrypt from "bcryptjs";
+import { mysqlPool } from "@/utils/db";
 
 export async function POST(req) {
   try {
-    const body = await req.json();
-    const { name, email, password } = body;
+    const { name, email, password, role } = await req.json();
 
-
-    if (!email || !password) {
-      return new Response(JSON.stringify({ message: "Email and password are required" }), { status: 400 });
+    if (!name || !email || !password) {
+      return NextResponse.json(
+        { error: "Missing required fields" },
+        { status: 400 }
+      );
     }
 
+    // Check if email exists
+    const [rows] = await mysqlPool.query(
+      "SELECT id FROM users WHERE email = ?",
+      [email]
+    );
 
-    const existing = await prisma.user.findUnique({ where: { email } });
-    if (existing) {
-      return new Response(JSON.stringify({ message: "Email already in use" }), { status: 400 });
+    if (rows.length > 0) {
+      return NextResponse.json(
+        { error: "Email already exists" },
+        { status: 400 }
+      );
     }
 
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 10);
 
-    const hashed = await bcrypt.hash(password, 10);
+    // Insert user
+    await mysqlPool.query(
+      "INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, ?)",
+      [name, email, hashedPassword, role || "user"]
+    );
 
-
-    const user = await prisma.user.create({
-      data: { name, email, password: hashed },
-    });
-
-
-    return new Response(JSON.stringify({ message: "Account created successfully", userId: user.id }), {
-      status: 201,
-    });
-  } catch (error) {
-    return new Response(JSON.stringify({ message: "An error occurred" }), { status: 500 });
+    return NextResponse.json({ message: "User registered successfully" });
+  } catch (err) {
+    console.error("Register error:", err);
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    );
   }
 }
-

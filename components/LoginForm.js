@@ -1,17 +1,13 @@
 "use client";
-
-import { useState, Suspense } from "react";
-import { signIn } from "next-auth/react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
+import useAuthStore from "@/app/store/useAuthStore";
 
-function LoginForm() {
+export default function LoginPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get("callbackUrl") || "/";
-
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const setUser = useAuthStore((s) => s.setUser);
+  const [form, setForm] = useState({ email: "", password: "" });
   const [rememberMe, setRememberMe] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -21,25 +17,23 @@ function LoginForm() {
     setErrorMsg("");
     setIsLoading(true);
 
-    const res = await signIn("credentials", {
-      email,
-      password,
-      redirect: false,
-      callbackUrl,
+    const res = await fetch("/api/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(form),
     });
 
-    setIsLoading(false);
+    if (res.ok) {
+      const me = await fetch("/api/auth/me");
+      const data = await me.json();
+      setUser(data.user);
 
-    if (res.error) {
-      const errorMessages = {
-        "Invalid credentials": "Invalid email or password",
-        "Email and password are required": "Please enter both email and password",
-        "CredentialsSignin": "Invalid email or password",
-      };
-
-      setErrorMsg(errorMessages[res.error] || "An error occurred during login");
+      if (data.user.role === "admin") router.push("/dashboard");
+      else router.push("/");
     } else {
-      router.push(callbackUrl);
+      setIsLoading(false);
+      const error = await res.json();
+      setErrorMsg(error.message || "Invalid email or password");
     }
   }
 
@@ -63,8 +57,8 @@ function LoginForm() {
             </label>
             <input
               type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              value={form.email}
+              onChange={(e) => setForm({ ...form, email: e.target.value })}
               placeholder="name@company.com"
               required
               className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 placeholder-gray-400"
@@ -78,8 +72,8 @@ function LoginForm() {
             <input
               type="password"
               placeholder="••••••••"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              value={form.password}
+              onChange={(e) => setForm({ ...form, password: e.target.value })}
               required
               className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
             />
@@ -123,17 +117,5 @@ function LoginForm() {
         </form>
       </div>
     </div>
-  );
-}
-
-export default function LoginPage() {
-  return (
-    <Suspense fallback={
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-gray-600">Loading...</div>
-      </div>
-    }>
-      <LoginForm />
-    </Suspense>
   );
 }

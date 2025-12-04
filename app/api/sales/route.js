@@ -3,7 +3,7 @@ import { mysqlPool } from "@/utils/db";
 
 // GET all sales
 export async function GET() {
-  const db = mysqlPool.promise();
+  const db = mysqlPool
   const [rows] = await db.query(`SELECT * FROM sales;`);
   return NextResponse.json(rows);
 }
@@ -14,7 +14,7 @@ export async function POST(request) {
     const body = await request.json();
     const { total, subtotal, tax, paymentType, voucherCode, cashierId } = body;
 
-    const db = mysqlPool.promise();
+    const db = mysqlPool
     const [result] = await db.query(
       `INSERT INTO sales (total, subtotal, tax, paymentType, voucherCode, cashierId)
        VALUES (?, ?, ?, ?, ?, ?)`,

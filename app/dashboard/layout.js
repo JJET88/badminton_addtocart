@@ -1,13 +1,30 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import useAuthStore from "../store/useAuthStore";
 
 export default function DashboardLayout({ children }) {
   const pathname = usePathname();
 
   const [collapsed, setCollapsed] = useState(false); // ⭐ sidebar toggle
+
+  const router = useRouter();
+  const { user } = useAuthStore();
+
+
+  // 🔐 ADMIN PROTECTION
+  useEffect(() => {
+    if (!user) {
+      router.replace("/login");
+      return;
+    }
+
+    if (user.role !== "admin") {
+      router.replace("/accessDeny");
+    }
+  }, [user]);
 
   const menu = [
     { name: "Dashboard", path: "/dashboard", icon: "📬", },

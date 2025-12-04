@@ -1,3 +1,5 @@
+"use client";
+
 import Link from "next/link";
 
 export default function AccessDeny() {
@@ -38,7 +40,8 @@ export default function AccessDeny() {
             Access Denied
           </h2>
           <p className="text-gray-600 mb-8">
-            You must be logged in to view this page.
+            You do not have permission to access the admin dashboard.
+            
           </p>
 
           {/* Button */}

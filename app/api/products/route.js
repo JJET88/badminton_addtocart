@@ -3,7 +3,7 @@ import { mysqlPool } from "@/utils/db";
 
 // GET all products
 export async function GET() {
-  const promisePool = mysqlPool.promise();
+  const promisePool = mysqlPool
   const [rows] = await promisePool.query(`SELECT * FROM products;`);
   return NextResponse.json(rows);
 }
@@ -14,7 +14,7 @@ export async function POST(request) {
     const body = await request.json();
     const { title, price, stock, category, image } = body;
 
-    const promisePool = mysqlPool.promise();
+    const promisePool = mysqlPool
     const [result] = await promisePool.query(
       `INSERT INTO products (title, price, stock, category, image)
        VALUES (?, ?, ?, ?, ?)`,

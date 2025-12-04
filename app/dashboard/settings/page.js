@@ -1,204 +1,300 @@
 "use client";
 
+import LogoutBtn from "@/components/LogoutBtn";
 import { useEffect, useState } from "react";
+import useAuthStore from "@/app/store/useAuthStore";
+import toast from "react-hot-toast";
 
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState("profile");
   const [loading, setLoading] = useState(true);
+  const [isUpdating, setIsUpdating] = useState(false);
 
-  // FIXED: matched your real DB structure
+  const authUser = useAuthStore((s) => s.user);
+  const updateAuthUser = useAuthStore((s) => s.updateUser);
+
   const [user, setUser] = useState({
     name: "",
     email: "",
     role: "",
   });
 
-  // Fetch user (id=1 for now)
   const fetchUser = async () => {
+    if (!authUser?.id) {
+      toast.error("Please login first");
+      return;
+    }
+
     try {
-      const res = await fetch("/api/users/1"); // ⬅ change later for auth
+      setLoading(true);
+      const res = await fetch(`/api/users/${authUser.id}`);
+      
+      if (!res.ok) {
+        throw new Error("Failed to load user");
+      }
+
       const data = await res.json();
       setUser({
         name: data.name,
         email: data.email,
         role: data.role,
       });
-      setLoading(false);
     } catch (error) {
-      console.log("Error loading user:", error);
+      toast.error(error.message || "Error loading user");
+      console.error(error);
+    } finally {
+      setLoading(false);
     }
   };
 
   useEffect(() => {
     fetchUser();
-  }, []);
+  }, [authUser]);
 
-  // Save user updates
   const handleSave = async () => {
-    const res = await fetch("/api/users/1", {
-      method: "PUT",
-      body: JSON.stringify(user),
-    });
-    alert(res.ok ? "Profile updated successfully!" : "Failed to update profile");
+    if (!authUser?.id) return;
+
+    try {
+      setIsUpdating(true);
+      const res = await fetch(`/api/users/${authUser.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(user),
+      });
+
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || "Failed to update profile");
+      }
+
+      const updatedUser = await res.json();
+      updateAuthUser({ name: updatedUser.name, email: updatedUser.email });
+      toast.success("Profile updated successfully!");
+    } catch (error) {
+      toast.error(error.message || "Update failed");
+      console.error(error);
+    } finally {
+      setIsUpdating(false);
+    }
   };
 
-  if (loading) return <p>Loading...</p>;
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="animate-pulse">
+          <div className="bg-white rounded-2xl shadow-lg p-8 w-96">
+            <div className="h-8 bg-gray-200 rounded mb-6"></div>
+            <div className="space-y-4">
+              <div className="h-12 bg-gray-200 rounded"></div>
+              <div className="h-12 bg-gray-200 rounded"></div>
+              <div className="h-12 bg-gray-200 rounded"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div>
-      <h1 className="text-3xl font-bold mb-6">Settings</h1>
+    <div className="min-h-screen bg-gray-50 p-6">
+      <div className=" mx-auto">
+        <h1 className="text-3xl font-bold text-gray-900 mb-6">Settings</h1>
 
-      {/* Tabs */}
-      <div className="flex gap-2 mb-6 border-b">
-        {[
-          { id: "profile", name: "Profile", icon: "👤" },
-          { id: "account", name: "Account", icon: "⚙️" },
-          { id: "notifications", name: "Notifications", icon: "🔔" },
-          { id: "security", name: "Security", icon: "🔒" },
-        ].map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            className={`flex items-center gap-2 px-6 py-3 border-b-2 transition-colors ${
-              activeTab === tab.id
-                ? "border-blue-600 text-blue-600"
-                : "border-transparent text-gray-600 hover:text-gray-800"
-            }`}
-          >
-            <span>{tab.icon}</span>
-            <span className="font-medium">{tab.name}</span>
-          </button>
-        ))}
-      </div>
-
-      {/* Profile Tab */}
-      {activeTab === "profile" && (
-        <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-xl font-bold mb-6">Profile Information</h2>
-
-          <InputField
-            label="Name"
-            value={user.name}
-            onChange={(v) => setUser({ ...user, name: v })}
-          />
-
-          <InputField
-            label="Email"
-            type="email"
-            value={user.email}
-            onChange={(v) => setUser({ ...user, email: v })}
-          />
-
-          <div className="mb-4">
-            <label className="block text-sm font-medium mb-1">Role</label>
-            <select
-              value={user.role}
-              onChange={(e) => setUser({ ...user, role: e.target.value })}
-              className="w-full px-4 py-2 border rounded-lg"
-            >
-              <option value="admin">Admin</option>
-              <option value="cashier">Cashier</option>
-              <option value="other">Other</option>
-            </select>
+        {/* Tabs */}
+        <div className="bg-white rounded-lg shadow mb-6">
+          <div className="flex gap-2 border-b overflow-x-auto">
+            {[
+              { id: "profile", name: "Profile", icon: "👤" },
+              { id: "account", name: "Account", icon: "⚙️" },
+              { id: "notifications", name: "Notifications", icon: "🔔" },
+              { id: "security", name: "Security", icon: "🔒" },
+            ].map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex items-center gap-2 px-6 py-3 border-b-2 transition-colors whitespace-nowrap ${
+                  activeTab === tab.id
+                    ? "border-blue-600 text-blue-600"
+                    : "border-transparent text-gray-600 hover:text-gray-800"
+                }`}
+              >
+                <span>{tab.icon}</span>
+                <span className="font-medium">{tab.name}</span>
+              </button>
+            ))}
           </div>
 
-          <button
-            className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 mt-4"
-            onClick={handleSave}
-          >
-            Save Changes
-          </button>
+          {/* Profile Tab */}
+          {activeTab === "profile" && (
+            <div className="p-6">
+              <h2 className="text-xl font-bold text-gray-900 mb-6">Profile Information</h2>
+
+              <div className="space-y-5">
+                <InputField
+                  label="Name"
+                  value={user.name}
+                  onChange={(v) => setUser({ ...user, name: v })}
+                  placeholder="John Doe"
+                />
+
+                <InputField
+                  label="Email"
+                  type="email"
+                  value={user.email}
+                  onChange={(v) => setUser({ ...user, email: v })}
+                  placeholder="john@example.com"
+                />
+
+                <div>
+                  <label className="block text-gray-900 font-medium mb-2">Role</label>
+                  <select
+                    value={user.role}
+                    onChange={(e) => setUser({ ...user, role: e.target.value })}
+                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                  >
+                    <option value="user">User</option>
+                    <option value="admin">Admin</option>
+                  </select>
+                </div>
+
+                <button
+                  className="bg-blue-600 disabled:bg-blue-400 disabled:cursor-not-allowed hover:bg-blue-700 hover:shadow-lg hover:scale-[1.02] active:scale-95 transition-all text-white font-medium px-6 py-3 rounded-lg"
+                  onClick={handleSave}
+                  disabled={isUpdating}
+                >
+                  {isUpdating ? (
+                    <span className="flex items-center gap-2">
+                      <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
+                      </svg>
+                      Saving...
+                    </span>
+                  ) : 'Save Changes'}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Account Tab */}
+          {activeTab === "account" && (
+            <div className="p-6">
+              <h2 className="text-xl font-bold text-gray-900 mb-6">Account Settings</h2>
+
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                <p className="text-sm text-blue-900">
+                  <strong>Account ID:</strong> {authUser?.id}
+                </p>
+                <p className="text-sm text-blue-900 mt-1">
+                  <strong>Member since:</strong> {new Date(authUser?.created_at || Date.now()).toLocaleDateString()}
+                </p>
+              </div>
+
+              <p className="text-gray-600 mb-6">
+                Manage your account preferences and settings here.
+              </p>
+
+              <div className="flex gap-3">
+                <LogoutBtn />
+              </div>
+            </div>
+          )}
+
+          {/* Notifications Tab */}
+          {activeTab === "notifications" && (
+            <div className="p-6">
+              <h2 className="text-xl font-bold text-gray-900 mb-6">Notifications</h2>
+
+              <div className="space-y-4">
+                <ToggleItem label="Email notifications for new orders" />
+                <ToggleItem label="Low stock alerts" />
+                <ToggleItem label="Daily sales summary" />
+                <ToggleItem label="Weekly reports" />
+                <ToggleItem label="Product updates" />
+              </div>
+            </div>
+          )}
+
+          {/* Security Tab */}
+          {activeTab === "security" && (
+            <div className="p-6">
+              <h2 className="text-xl font-bold text-gray-900 mb-6">Security</h2>
+
+              <PasswordChangeForm userId={authUser?.id} />
+            </div>
+          )}
         </div>
-      )}
-
-      {/* Account Tab */}
-      {activeTab === "account" && (
-        <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-xl font-bold mb-6">Account Settings</h2>
-
-          <p className="text-gray-600 mb-4">
-            Account management features can be added here (store name, currency, etc.)
-          </p>
-        </div>
-      )}
-
-      {/* Notifications Tab */}
-      {activeTab === "notifications" && (
-        <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-xl font-bold mb-6">Notifications</h2>
-
-          <ToggleItem label="New order notifications" />
-          <ToggleItem label="Low stock alerts" />
-          <ToggleItem label="Daily sales summary" />
-        </div>
-      )}
-
-      {/* Security Tab */}
-      {activeTab === "security" && (
-        <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-xl font-bold mb-6">Security</h2>
-
-          <PasswordChangeForm />
-        </div>
-      )}
+      </div>
     </div>
   );
 }
 
 /* ----------- REUSABLE COMPONENTS ----------- */
 
-function InputField({ label, value, onChange, type = "text" }) {
+function InputField({ label, value, onChange, type = "text", placeholder = "" }) {
   return (
-    <div className="mb-4">
-      <label className="block text-sm font-medium mb-1">{label}</label>
+    <div>
+      <label className="block text-gray-900 font-medium mb-2">{label}</label>
       <input
         type={type}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full px-4 py-2 border rounded-lg"
+        placeholder={placeholder}
+        className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 placeholder-gray-400"
       />
     </div>
   );
 }
 
 function ToggleItem({ label }) {
+  const [checked, setChecked] = useState(false);
+
   return (
-    <div className="flex items-center justify-between py-3 border-b">
-      <p>{label}</p>
-      <input type="checkbox" defaultChecked className="w-5 h-5" />
+    <div className="flex items-center justify-between py-3 border-b border-gray-200">
+      <p className="text-gray-900">{label}</p>
+      <button
+        onClick={() => setChecked(!checked)}
+        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+          checked ? 'bg-blue-600' : 'bg-gray-200'
+        }`}
+      >
+        <span
+          className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+            checked ? 'translate-x-6' : 'translate-x-1'
+          }`}
+        />
+      </button>
     </div>
   );
 }
 
-function PasswordChangeForm() {
+function PasswordChangeForm({ userId }) {
   const [passwords, setPasswords] = useState({
     current: "",
     new: "",
     confirm: "",
   });
-  const [error, setError] = useState("");
+  const [isUpdating, setIsUpdating] = useState(false);
 
   const handlePasswordChange = async () => {
-    setError("");
-
-    // Validation
     if (!passwords.current || !passwords.new || !passwords.confirm) {
-      setError("All fields are required");
+      toast.error("All fields are required");
       return;
     }
 
     if (passwords.new.length < 6) {
-      setError("New password must be at least 6 characters");
+      toast.error("New password must be at least 6 characters");
       return;
     }
 
     if (passwords.new !== passwords.confirm) {
-      setError("New passwords do not match");
+      toast.error("New passwords do not match");
       return;
     }
 
     try {
-      const res = await fetch("/api/users/1/password", {
+      setIsUpdating(true);
+      const res = await fetch(`/api/users/${userId}/password`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -210,48 +306,57 @@ function PasswordChangeForm() {
       const data = await res.json();
 
       if (res.ok) {
-        alert("Password updated successfully!");
+        toast.success("Password updated successfully!");
         setPasswords({ current: "", new: "", confirm: "" });
       } else {
-        setError(data.error || "Failed to update password");
+        toast.error(data.error || "Failed to update password");
       }
     } catch (error) {
-      setError("An error occurred. Please try again.");
+      toast.error("An error occurred. Please try again.");
+      console.error(error);
+    } finally {
+      setIsUpdating(false);
     }
   };
 
   return (
-    <div className="space-y-4">
-      {error && (
-        <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm">
-          {error}
-        </div>
-      )}
-
+    <div className="space-y-5">
       <InputField
         label="Current Password"
         type="password"
         value={passwords.current}
         onChange={(v) => setPasswords({ ...passwords, current: v })}
+        placeholder="Enter current password"
       />
       <InputField
         label="New Password"
         type="password"
         value={passwords.new}
         onChange={(v) => setPasswords({ ...passwords, new: v })}
+        placeholder="Enter new password"
       />
       <InputField
         label="Confirm New Password"
         type="password"
         value={passwords.confirm}
         onChange={(v) => setPasswords({ ...passwords, confirm: v })}
+        placeholder="Confirm new password"
       />
 
       <button
-        className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700"
+        className="bg-blue-600 disabled:bg-blue-400 disabled:cursor-not-allowed hover:bg-blue-700 hover:shadow-lg hover:scale-[1.02] active:scale-95 transition-all text-white font-medium px-6 py-3 rounded-lg"
         onClick={handlePasswordChange}
+        disabled={isUpdating}
       >
-        Update Password
+        {isUpdating ? (
+          <span className="flex items-center gap-2">
+            <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/>
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
+            </svg>
+            Updating...
+          </span>
+        ) : 'Update Password'}
       </button>
     </div>
   );
