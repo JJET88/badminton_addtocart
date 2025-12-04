@@ -6,7 +6,7 @@ import useAuthStore from "@/app/store/useAuthStore";
 
 export default function LoginPage() {
   const router = useRouter();
-  const setUser = useAuthStore((s) => s.setUser);
+  const fetchUser = useAuthStore((s) => s.fetchUser);
   const [form, setForm] = useState({ email: "", password: "" });
   const [rememberMe, setRememberMe] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
@@ -17,23 +17,38 @@ export default function LoginPage() {
     setErrorMsg("");
     setIsLoading(true);
 
-    const res = await fetch("/api/auth/login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(form),
-    });
+    try {
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
 
-    if (res.ok) {
-      const me = await fetch("/api/auth/me");
-      const data = await me.json();
-      setUser(data.user);
+      if (res.ok) {
+        // Fetch fresh user data from database (includes latest points)
+        const user = await fetchUser();
 
-      if (data.user.role === "admin") router.push("/dashboard");
-      else router.push("/");
-    } else {
+        if (!user) {
+          setErrorMsg("Failed to fetch user data");
+          setIsLoading(false);
+          return;
+        }
+
+        // Redirect based on role
+        if (user.role === "admin") {
+          router.push("/dashboard");
+        } else {
+          router.push("/");
+        }
+      } else {
+        const error = await res.json();
+        setErrorMsg(error.message || "Invalid email or password");
+        setIsLoading(false);
+      }
+    } catch (err) {
+      console.error("Login error:", err);
+      setErrorMsg("An error occurred during login");
       setIsLoading(false);
-      const error = await res.json();
-      setErrorMsg(error.message || "Invalid email or password");
     }
   }
 

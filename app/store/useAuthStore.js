@@ -9,44 +9,80 @@ const useAuthStore = create(
       user: null,
       isLoading: false,
 
-      // Save logged-in user
-      setUser: (user) => set({ user }),
+      // -----------------------------
+      // SET LOGGED-IN USER
+      // -----------------------------
+      setUser: (user) => {
+        // Ensure "points" exists to avoid undefined
+        const safeUser = {
+          ...user,
+          points: user?.points ?? 0,
+        };
+        set({ user: safeUser });
+      },
 
-      // Update user data (partial update)
-      updateUser: (userData) => 
+      // -----------------------------
+      // UPDATE USER (partial update)
+      // Example: updateUser({ points: newPoints })
+      // -----------------------------
+      updateUser: (userData) =>
         set((state) => ({
-          user: state.user ? { ...state.user, ...userData } : null
+          user: state.user
+            ? { ...state.user, ...userData }
+            : null,
         })),
 
-      // Clear user without API call (for client-side clearing)
+      // -----------------------------
+      // UPDATE ONLY POINTS
+      // Call after successful transaction
+      // -----------------------------
+      updatePoints: (newPoints) =>
+        set((state) => ({
+          user: state.user
+            ? { ...state.user, points: newPoints }
+            : null,
+        })),
+
+      // -----------------------------
+      // CLEAR USER
+      // -----------------------------
       clearUser: () => set({ user: null }),
 
-      // Check if user is authenticated
+      // AUTH HELPERS
       isAuthenticated: () => get().user !== null,
-
-      // Check if user is admin
       isAdmin: () => get().user?.role === "admin",
-
-      // Get user ID
       getUserId: () => get().user?.id,
 
-      // Set loading state
+      // -----------------------------
+      // LOADING STATE
+      // -----------------------------
       setLoading: (isLoading) => set({ isLoading }),
 
-      // Fetch current user from API
+      // -----------------------------
+      // FETCH USER FROM /api/auth/me
+      // ALWAYS ensures points default (0)
+      // -----------------------------
       fetchUser: async () => {
         try {
           set({ isLoading: true });
+
           const res = await fetch("/api/auth/me");
-          
-          if (res.ok) {
-            const data = await res.json();
-            set({ user: data.user, isLoading: false });
-            return data.user;
-          } else {
+
+          if (!res.ok) {
             set({ user: null, isLoading: false });
             return null;
           }
+
+          const data = await res.json();
+
+          const safeUser = {
+            ...data.user,
+            points: data.user?.points ?? 0,
+          };
+
+          set({ user: safeUser, isLoading: false });
+          return safeUser;
+
         } catch (error) {
           console.error("Fetch user failed:", error);
           set({ user: null, isLoading: false });
@@ -54,19 +90,19 @@ const useAuthStore = create(
         }
       },
 
-      // Logout user
+      // -----------------------------
+      // LOGOUT
+      // -----------------------------
       logout: async () => {
         try {
           set({ isLoading: true });
-          
+
           await fetch("/api/auth/logout", {
             method: "POST",
           });
 
-          // Clear Zustand state
           set({ user: null, isLoading: false });
 
-          // Redirect to login page
           if (typeof window !== "undefined") {
             window.location.href = "/login";
           }
@@ -77,8 +113,8 @@ const useAuthStore = create(
       },
     }),
     {
-      name: "auth-storage", // Key in localStorage
-      storage: createJSONStorage(() => localStorage), // Use localStorage
+      name: "auth-storage",
+      storage: createJSONStorage(() => localStorage),
     }
   )
 );

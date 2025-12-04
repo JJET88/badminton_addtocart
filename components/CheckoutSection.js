@@ -1,6 +1,7 @@
 import { useToggle } from "@/context/ToggleContext";
 import useCartStore from "@/app/store/useCartStore";
 import useProductStore from "@/app/store/useProductStore";
+import useAuthStore from "@/app/store/useAuthStore";
 import React, { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";
@@ -14,9 +15,19 @@ export default function CheckoutSection() {
 	const [voucherError, setVoucherError] = useState("");
 	const [loading, setLoading] = useState(false);
 
+	// Points redemption states
+	const [pointsToRedeem, setPointsToRedeem] = useState("");
+	const [redeemedPoints, setRedeemedPoints] = useState(0);
+	const [pointsDiscount, setPointsDiscount] = useState(0);
+	const [pointsError, setPointsError] = useState("");
+
 	const { open, openSection, closeSection } = useToggle();
 	const { carts, clearCart } = useCartStore();
 	const { products, fetchProducts } = useProductStore();
+	const { user, fetchUser } = useAuthStore();
+
+	const POINTS_TO_DOLLAR_RATIO = 10; // 10 points = $1
+
 	const showToast = (message, type = "info") => {
 		if (type === "success") toast.success(message);
 		else if (type === "error") toast.error(message);
@@ -67,17 +78,18 @@ export default function CheckoutSection() {
 		return acc + (product?.price || 0) * cart.quantity;
 	}, 0);
 
-	let discount = 0;
+	let voucherDiscount = 0;
 
 	if (appliedVoucher) {
 		if (appliedVoucher.type === "percentage") {
-			discount = (subtotal * appliedVoucher.amount) / 100;
+			voucherDiscount = (subtotal * appliedVoucher.amount) / 100;
 		} else if (appliedVoucher.type === "fixed") {
-			discount = appliedVoucher.amount;
+			voucherDiscount = appliedVoucher.amount;
 		}
 	}
 
-	const afterDiscount = subtotal - discount;
+	const totalDiscount = voucherDiscount + pointsDiscount;
+	const afterDiscount = Math.max(0, subtotal - totalDiscount);
 	const tax = afterDiscount * 0.1;
 	const total = afterDiscount + tax;
 
@@ -89,11 +101,9 @@ export default function CheckoutSection() {
 		}
 
 		try {
-			// fetch all vouchers
 			const res = await fetch("/api/vouchers");
 			const vouchers = await res.json();
 
-			// find voucher
 			const voucher = vouchers.find(
 				(v) => v.code.toUpperCase() === voucherCode.toUpperCase()
 			);
@@ -118,6 +128,7 @@ export default function CheckoutSection() {
 
 			setAppliedVoucher(voucher);
 			setVoucherError("");
+			showToast("Voucher applied successfully!", "success");
 		} catch (err) {
 			setVoucherError("Error applying voucher");
 		}
@@ -127,6 +138,59 @@ export default function CheckoutSection() {
 		setAppliedVoucher(null);
 		setVoucherCode("");
 		setVoucherError("");
+	}
+
+	// ----- REDEEM POINTS -----
+	function applyPoints() {
+		const points = parseInt(pointsToRedeem);
+
+		if (!points || points <= 0) {
+			setPointsError("Please enter valid points");
+			return;
+		}
+
+		if (!user) {
+			setPointsError("Please login to redeem points");
+			return;
+		}
+
+		if (points > (user.points || 0)) {
+			setPointsError(`You only have ${user.points || 0} points`);
+			return;
+		}
+
+		const discount = points / POINTS_TO_DOLLAR_RATIO;
+
+		// Don't allow discount to exceed subtotal
+		if (discount > subtotal) {
+			setPointsError(`Maximum ${subtotal * POINTS_TO_DOLLAR_RATIO} points can be used`);
+			return;
+		}
+
+		setRedeemedPoints(points);
+		setPointsDiscount(discount);
+		setPointsError("");
+		showToast(`${points} points applied! ($${discount.toFixed(2)} discount)`, "success");
+	}
+
+	function removePoints() {
+		setRedeemedPoints(0);
+		setPointsDiscount(0);
+		setPointsToRedeem("");
+		setPointsError("");
+	}
+
+	function useAllPoints() {
+		if (!user || !user.points) {
+			setPointsError("You have no points to redeem");
+			return;
+		}
+
+		const maxDiscount = subtotal;
+		const maxPoints = Math.floor(maxDiscount * POINTS_TO_DOLLAR_RATIO);
+		const pointsToUse = Math.min(user.points, maxPoints);
+
+		setPointsToRedeem(pointsToUse.toString());
 	}
 
 	// ----- CONFIRM PAYMENT -----
@@ -146,10 +210,10 @@ export default function CheckoutSection() {
 				total: parseFloat(total.toFixed(2)),
 				subtotal: parseFloat(subtotal.toFixed(2)),
 				tax: parseFloat(tax.toFixed(2)),
-				discount: parseFloat(discount.toFixed(2)),
+				discount: parseFloat(totalDiscount.toFixed(2)),
 				paymentType: paymentMethod,
 				voucherCode: appliedVoucher?.code || null,
-				cashierId: 1,
+				cashierId: user?.id || 1,
 			};
 
 			const saleRes = await fetch("/api/sales", {
@@ -191,20 +255,61 @@ export default function CheckoutSection() {
 				}
 			}
 
-			showToast("Payment successful.", "success");
+			// ===== HANDLE POINTS =====
+			if (user?.id) {
+				try {
+					// Deduct redeemed points first
+					if (redeemedPoints > 0) {
+						await fetch("/api/users/redeem-points", {
+							method: "POST",
+							headers: { "Content-Type": "application/json" },
+							body: JSON.stringify({
+								userId: user.id,
+								pointsToRedeem: redeemedPoints,
+							}),
+						});
+					}
+
+					// Then add 5 points for the purchase
+					const pointsRes = await fetch("/api/users/add-points", {
+						method: "POST",
+						headers: { "Content-Type": "application/json" },
+						body: JSON.stringify({
+							userId: user.id,
+							pointsToAdd: 5,
+						}),
+					});
+
+					if (pointsRes.ok) {
+						await fetchUser();
+						if (redeemedPoints > 0) {
+							showToast(`Payment successful! Redeemed ${redeemedPoints} points & earned 5 points! 🎉`, "success");
+						} else {
+							showToast("Payment successful! You earned 5 points! 🎉", "success");
+						}
+					} else {
+						showToast("Payment successful.", "success");
+					}
+				} catch (pointsErr) {
+					console.error("Failed to handle points:", pointsErr);
+					showToast("Payment successful.", "success");
+				}
+			} else {
+				showToast("Payment successful.", "success");
+			}
 
 			clearCart();
 			closeSection();
 			removeVoucher();
+			removePoints();
 
 		} catch (err) {
-			alert("Payment failed!");
+			console.error("Payment error:", err);
+			showToast("Payment failed!", "error");
 		} finally {
 			setLoading(false);
-      		router.push(`products`);
-
+			router.push(`/products`);
 		}
-
 	}
 
 	return (
@@ -246,8 +351,15 @@ export default function CheckoutSection() {
 
 							{appliedVoucher && (
 								<div className="flex justify-between text-sm text-green-600">
-									<span>Discount ({appliedVoucher.code})</span>
-									<span>- ${discount.toFixed(2)}</span>
+									<span>Voucher ({appliedVoucher.code})</span>
+									<span>- ${voucherDiscount.toFixed(2)}</span>
+								</div>
+							)}
+
+							{pointsDiscount > 0 && (
+								<div className="flex justify-between text-sm text-yellow-600">
+									<span>Points Discount ({redeemedPoints} pts)</span>
+									<span>- ${pointsDiscount.toFixed(2)}</span>
 								</div>
 							)}
 
@@ -260,8 +372,80 @@ export default function CheckoutSection() {
 								<span>Total</span>
 								<span className="text-green-600">${total.toFixed(2)}</span>
 							</div>
+
+							{/* Points Reward Notice */}
+							{user && (
+								<div className="bg-yellow-50 border border-yellow-200 rounded-lg p-2 mt-3">
+									<p className="text-xs text-yellow-800 text-center">
+										⭐ Earn <span className="font-bold">5 points</span> with this purchase!
+									</p>
+								</div>
+							)}
 						</div>
 					</div>
+
+					{/* REDEEM POINTS SECTION */}
+					{user && user.points > 0 && (
+						<div>
+							<div className="flex justify-between items-center mb-3">
+								<p className="text-lg font-semibold">Redeem Points</p>
+								<span className="text-sm text-gray-600">
+									You have <span className="font-bold text-yellow-600">{user.points}</span> points
+								</span>
+							</div>
+
+							{redeemedPoints > 0 ? (
+								<div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 flex justify-between items-center">
+									<div>
+										<p className="font-semibold text-yellow-800">
+											{redeemedPoints} points redeemed
+										</p>
+										<p className="text-sm text-yellow-600">
+											${pointsDiscount.toFixed(2)} discount applied
+										</p>
+									</div>
+									<button onClick={removePoints} className="text-red-500 font-medium">
+										Remove
+									</button>
+								</div>
+							) : (
+								<>
+									<div className="flex gap-2">
+										<input
+											type="number"
+											value={pointsToRedeem}
+											onChange={(e) => setPointsToRedeem(e.target.value)}
+											className="flex-1 border rounded-lg px-3 py-2"
+											placeholder={`Enter points (${POINTS_TO_DOLLAR_RATIO} pts = $1)`}
+											min="0"
+											max={user.points}
+										/>
+										<button
+											onClick={applyPoints}
+											className="bg-yellow-500 text-white px-4 py-2 rounded-lg hover:bg-yellow-600"
+										>
+											Apply
+										</button>
+									</div>
+
+									<button
+										onClick={useAllPoints}
+										className="mt-2 text-sm text-blue-600 hover:underline"
+									>
+										Use all available points
+									</button>
+
+									{pointsError && (
+										<p className="text-sm text-red-500 mt-2">{pointsError}</p>
+									)}
+
+									<p className="text-xs text-gray-500 mt-2">
+										💡 {POINTS_TO_DOLLAR_RATIO} points = $1 discount
+									</p>
+								</>
+							)}
+						</div>
+					)}
 
 					{/* PAYMENT METHODS */}
 					<div>
