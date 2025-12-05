@@ -1,8 +1,5 @@
 import { create } from "zustand";
 
-// Optional: import your toast utility if available
-// import { showToast } from "@/utils/toast";
-
 const useProductStore = create((set) => ({
   products: [],
   loading: false,
@@ -10,29 +7,36 @@ const useProductStore = create((set) => ({
   fetchProducts: async () => {
     set({ loading: true });
     try {
-      const res = await fetch("/api/products", { cache: "no-store" }); // important for client-side fetching
+      const res = await fetch("/api/products", { cache: "no-store" });
       if (!res.ok) throw new Error(`Failed to fetch: ${res.status}`);
 
       const rawData = await res.json();
-      console.log("Fetched data:", rawData); // debug
+      console.log("Fetched data:", rawData);
 
+      // ✅ FIX: Include ALL fields including stock!
       const formattedData = rawData.map((item) => ({
         id: item.id,
-        title: item.title,
+        title: item.title || item.name, // Support both field names
+        name: item.name || item.title,
         description: item.description,
         price: parseFloat(item.price) || 0,
+        stock: parseInt(item.stock) || 0, // ⭐ CRITICAL: Include stock!
         category: item.category,
-        image: item.image,
+        image: item.image || item.imageUrl,
+        imageUrl: item.imageUrl || item.image,
         rating_rate: parseFloat(item.rating_rate) || 0,
         rating_count: parseInt(item.rating_count) || 0,
       }));
 
+      console.log("📦 Formatted products with stock:", formattedData.map(p => ({
+        id: p.id,
+        name: p.title || p.name,
+        stock: p.stock
+      })));
+
       set({ products: formattedData });
     } catch (error) {
       console.error("Error fetching products:", error);
-      if (typeof showToast === "function") {
-        showToast("❌ Failed to load products.", "error");
-      }
     } finally {
       set({ loading: false });
     }

@@ -29,8 +29,6 @@ export default function ProductList() {
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [pageSize, setPageSize] = useState(5);
 
-
-
   useEffect(() => {
     fetchProducts();
   }, [fetchProducts]);
@@ -59,15 +57,16 @@ export default function ProductList() {
     return list;
   }, [products, search, selectedCategory]);
 
-   const goNext = () => currentPage < totalPages && setCurrentPage((p) => p + 1);
-  const goPrev = () => currentPage > 1 && setCurrentPage((p) => p - 1);
-
- const totalPages = Math.ceil(products.length / pageSize);
+  // ✅ FIX: Calculate total pages based on FILTERED products, not all products
+  const totalPages = Math.ceil(filteredProducts.length / pageSize);
   const startIndex = (currentPage - 1) * pageSize;
   const currentProducts = filteredProducts.slice(
     startIndex,
     startIndex + pageSize
   );
+
+  const goNext = () => currentPage < totalPages && setCurrentPage((p) => p + 1);
+  const goPrev = () => currentPage > 1 && setCurrentPage((p) => p - 1);
 
   const handleAddedBtn = (event) => {
     event.stopPropagation();
@@ -81,6 +80,7 @@ export default function ProductList() {
       return showToast("Item already in cart!", "error");
     }
 
+    // ✅ CORRECT: Only add to cart, DON'T update stock here
     addCart({
       id: Date.now(),
       productId,
@@ -205,46 +205,46 @@ export default function ProductList() {
 
         {/* PAGINATION */}
         <div className="flex justify-between items-center mt-6">
-        {/* Page size selection */}
-        <div>
-          <label className="mr-2 text-gray-600">Rows per page:</label>
-          <select
-            value={pageSize}
-            onChange={(e) => {
-              setPageSize(Number(e.target.value));
-              setCurrentPage(1); // reset page
-            }}
-            className="border px-3 py-1 rounded"
-          >
-            <option value={4}>4</option>
-            <option value={6}>6</option>
-            <option value={8}>8</option>
-          </select>
+          {/* Page size selection */}
+          <div>
+            <label className="mr-2 text-gray-600">Rows per page:</label>
+            <select
+              value={pageSize}
+              onChange={(e) => {
+                setPageSize(Number(e.target.value));
+                setCurrentPage(1); // reset page
+              }}
+              className="border px-3 py-1 rounded"
+            >
+              <option value={4}>4</option>
+              <option value={6}>6</option>
+              <option value={8}>8</option>
+            </select>
+          </div>
+
+          {/* Prev / Next */}
+          <div className="flex items-center gap-3">
+            <button
+              onClick={goPrev}
+              disabled={currentPage === 1}
+              className="px-4 py-2 bg-gray-200 rounded disabled:opacity-50"
+            >
+              Previous
+            </button>
+
+            <span className="text-gray-700">
+              Page {currentPage} of {totalPages}
+            </span>
+
+            <button
+              onClick={goNext}
+              disabled={currentPage === totalPages}
+              className="px-4 py-2 bg-gray-200 rounded disabled:opacity-50"
+            >
+              Next
+            </button>
+          </div>
         </div>
-
-        {/* Prev / Next */}
-        <div className="flex items-center gap-3">
-          <button
-            onClick={goPrev}
-            disabled={currentPage === 1}
-            className="px-4 py-2 bg-gray-200 rounded disabled:opacity-50"
-          >
-            Previous
-          </button>
-
-          <span className="text-gray-700">
-            Page {currentPage} of {totalPages}
-          </span>
-
-          <button
-            onClick={goNext}
-            disabled={currentPage === totalPages}
-            className="px-4 py-2 bg-gray-200 rounded disabled:opacity-50"
-          >
-            Next
-          </button>
-        </div>
-      </div>
       </div>
     </div>
   );

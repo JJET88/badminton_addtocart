@@ -200,6 +200,13 @@ export default function CheckoutSection() {
 			return;
 		}
 
+		console.log("🛒 Starting checkout with products:", products.map(p => ({
+			id: p.id,
+			name: p.title || p.name,
+			stock: p.stock,
+			hasStock: p.stock !== undefined
+		})));
+
 		setLoading(true);
 
 		try {
@@ -227,9 +234,31 @@ export default function CheckoutSection() {
 			const sale = await saleRes.json();
 			const saleId = sale.id;
 
-			// SEND SALE ITEMS
+			// SEND SALE ITEMS AND UPDATE STOCK
 			for (const cart of carts) {
 				const product = products.find((p) => p.id === cart.productId);
+
+				console.log("🔍 Processing cart item:", {
+					cartId: cart.id,
+					productId: cart.productId,
+					productIdType: typeof cart.productId,
+					quantity: cart.quantity,
+					product: product ? {
+						id: product.id,
+						idType: typeof product.id,
+						name: product.title || product.name,
+						currentStock: product.stock,
+						stockType: typeof product.stock
+					} : "NOT FOUND"
+				});
+
+				// ⚠️ TYPE CHECK - This might be the issue!
+				if (!product) {
+					console.error("❌ CRITICAL: Product not found in products array!", {
+						lookingFor: cart.productId,
+						availableIds: products.map(p => ({ id: p.id, type: typeof p.id }))
+					});
+				}
 
 				const itemPayload = {
 					saleId,
@@ -244,14 +273,40 @@ export default function CheckoutSection() {
 					body: JSON.stringify(itemPayload),
 				});
 
-				// UPDATE STOCK
+				// UPDATE STOCK - reduce by quantity purchased
 				if (product) {
-					const newStock = product.stock - cart.quantity;
-					await fetch(`/api/products/${product.id}`, {
+					const currentStock = parseInt(product.stock) || 0;
+					const purchaseQty = parseInt(cart.quantity) || 0;
+					const newStock = currentStock - purchaseQty;
+					const finalStock = Math.max(0, newStock);
+					
+					console.log(`📦 Attempting to update stock for product ${product.id}:`, {
+						currentStock,
+						purchaseQty,
+						newStock,
+						finalStock,
+						productStockType: typeof product.stock,
+						productStockValue: product.stock
+					});
+					
+					const updatePayload = { stock: finalStock };
+					console.log("📤 Sending payload:", updatePayload);
+					
+					const stockUpdateRes = await fetch(`/api/products/${product.id}`, {
 						method: "PUT",
 						headers: { "Content-Type": "application/json" },
-						body: JSON.stringify({ ...product, stock: newStock }),
+						body: JSON.stringify(updatePayload),
 					});
+
+					const stockUpdateData = await stockUpdateRes.json();
+					
+					if (stockUpdateRes.ok) {
+						console.log(`✅ Stock updated successfully:`, stockUpdateData);
+					} else {
+						console.error(`❌ Stock update failed (${stockUpdateRes.status}):`, stockUpdateData);
+					}
+				} else {
+					console.error(`❌ Product not found in store for cart item:`, cart);
 				}
 			}
 
