@@ -17,53 +17,53 @@ export const mysqlPool = mysql.createPool({
   user: process.env.DB_USER || 'root',
   password: process.env.DB_PASS || '',
   database: process.env.DB_NAME || 'badminton_pos',
-  port: Number(process.env.DB_PORT || 3306),
+   port: Number(process.env.DB_PORT || 3306),
   waitForConnections: true,
   connectionLimit: 10,
-   ssl: {
-    rejectUnauthorized: true
-  },
-  
-  // Connection pool settings
-  waitForConnections: true,
-  connectionLimit: 10,
-  queueLimit: 0,
-  enableKeepAlive: true,
-  keepAliveInitialDelay: 0,
-  
-  // Important for TiDB
-  charset: 'utf8mb4',
-  timezone: '+00:00',
-  
-  // Timeout settings
-  connectTimeout: 60000,
-  acquireTimeout: 60000,
-  timeout: 60000
+  ssl: process.env.DB_SSL === 'true' ? { minVersion: 'TLSv1.2', rejectUnauthorized: true } : undefined,
 });
 
-// Test connection function
-export async function testConnection() {
-  try {
-    const connection = await mysqlPool.getConnection();
-    console.log('✅ Database connection successful');
-    
-    // Test query
-    const [rows] = await connection.query('SELECT 1 as test');
-    console.log('✅ Test query successful:', rows);
-    
-    connection.release();
-    return true;
-  } catch (error) {
-    console.error('❌ Database connection failed:', {
-      message: error.message,
-      code: error.code,
-      errno: error.errno
-    });
-    return false;
-  }
-}
+  
+//   // Connection pool settings
+//   waitForConnections: true,
+//   connectionLimit: 10,
+//   queueLimit: 0,
+//   enableKeepAlive: true,
+//   keepAliveInitialDelay: 0,
+  
+//   // Important for TiDB
+//   charset: 'utf8mb4',
+//   timezone: '+00:00',
+  
+//   // Timeout settings
+//   connectTimeout: 60000,
+//   acquireTimeout: 60000,
+//   timeout: 60000
+// });
 
-// Call this on server start (optional)
-if (process.env.NODE_ENV === 'development') {
-  testConnection();
-}
+// // Test connection function
+// export async function testConnection() {
+//   try {
+//     const connection = await mysqlPool.getConnection();
+//     console.log('✅ Database connection successful');
+    
+//     // Test query
+//     const [rows] = await connection.query('SELECT 1 as test');
+//     console.log('✅ Test query successful:', rows);
+    
+//     connection.release();
+//     return true;
+//   } catch (error) {
+//     console.error('❌ Database connection failed:', {
+//       message: error.message,
+//       code: error.code,
+//       errno: error.errno
+//     });
+//     return false;
+//   }
+// }
+
+// // Call this on server start (optional)
+// if (process.env.NODE_ENV === 'development') {
+//   testConnection();
+// }
