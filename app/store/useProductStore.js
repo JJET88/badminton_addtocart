@@ -23,9 +23,7 @@ const useProductStore = create((set) => ({
         stock: parseInt(item.stock) || 0, // ⭐ CRITICAL: Include stock!
         category: item.category,
         image: item.image || item.imageUrl,
-        imageUrl: item.imageUrl || item.image,
-        rating_rate: parseFloat(item.rating_rate) || 0,
-        rating_count: parseInt(item.rating_count) || 0,
+        
       }));
 
       console.log("📦 Formatted products with stock:", formattedData.map(p => ({

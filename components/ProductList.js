@@ -7,6 +7,7 @@ import toast from "react-hot-toast";
 import Link from "next/link";
 import Slideshow from "./Slideshow";
 import Header from "./Header";
+import { TrendingUp, Zap, Award } from "lucide-react";
 
 const showToast = (message, type = "info") => {
   if (type === "success") toast.success(message);
@@ -14,11 +15,27 @@ const showToast = (message, type = "info") => {
   else toast(message);
 };
 
-const slideshowImages = [
-  "https://li-ning.co.uk/wp-content/uploads/2022/04/aeronaut-9000-combat-11.jpg-1.jpg",
-  "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRsDCuTLNw-C54SaOmwzjyLx1_zKcPp4hT3jQ&s",
-  "https://shop.r10s.jp/starracket/cabinet/2025/nf-1000g.jpg",
-];
+// Enhanced slideshow data with promotional content
+// const slideshowData = [
+//   {
+//     image: "https://li-ning.co.uk/wp-content/uploads/2022/04/aeronaut-9000-combat-11.jpg-1.jpg",
+//     title: "Li-Ning Aeronaut Series",
+//     subtitle: "Premium Performance Rackets",
+//     badge: "New Arrival"
+//   },
+//   {
+//     image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRsDCuTLNw-C54SaOmwzjyLx1_zKcPp4hT3jQ&s",
+//     title: "Professional Badminton Bags",
+//     subtitle: "Carry Your Gear in Style",
+//     badge: "Best Seller"
+//   },
+//   {
+//     image: "https://shop.r10s.jp/starracket/cabinet/2025/nf-1000g.jpg",
+//     title: "Yonex Nanoflare 1000z",
+//     subtitle: "Lightning Fast Speed",
+//     badge: "Hot Deal"
+//   },
+// ];
 
 export default function ProductList() {
   const { carts, addCart } = useCartStore();
@@ -27,13 +44,13 @@ export default function ProductList() {
   const [currentPage, setCurrentPage] = useState(1);
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
-  const [pageSize, setPageSize] = useState(5);
+  const [pageSize, setPageSize] = useState(8);
+  const [viewMode, setViewMode] = useState("grid"); // grid or list
 
   useEffect(() => {
     fetchProducts();
   }, [fetchProducts]);
 
-  // RESET PAGE WHEN SEARCH OR CATEGORY CHANGES
   useEffect(() => {
     setCurrentPage(1);
   }, [search, selectedCategory]);
@@ -57,7 +74,6 @@ export default function ProductList() {
     return list;
   }, [products, search, selectedCategory]);
 
-  // ✅ FIX: Calculate total pages based on FILTERED products, not all products
   const totalPages = Math.ceil(filteredProducts.length / pageSize);
   const startIndex = (currentPage - 1) * pageSize;
   const currentProducts = filteredProducts.slice(
@@ -80,7 +96,6 @@ export default function ProductList() {
       return showToast("Item already in cart!", "error");
     }
 
-    // ✅ CORRECT: Only add to cart, DON'T update stock here
     addCart({
       id: Date.now(),
       productId,
@@ -103,42 +118,115 @@ export default function ProductList() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-indigo-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6">
-        {/* HEADER */}
         <Header search={search} setSearch={setSearch} />
 
-        {/* CATEGORY FILTER */}
-        <div className="flex justify-center gap-5 py-3 font-semibold text-gray-700">
-          {categories.map((cat) => (
+        {/* PROMOTIONAL BANNERS */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
+          <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl p-6 text-white shadow-lg hover:shadow-xl transition-shadow">
+            <Zap className="w-10 h-10 mb-2" />
+            <h3 className="text-xl font-bold mb-1">Fast Shipping</h3>
+            <p className="text-sm text-blue-100">Free delivery on orders over $100</p>
+          </div>
+          
+          <div className="bg-gradient-to-r from-green-500 to-green-600 rounded-xl p-6 text-white shadow-lg hover:shadow-xl transition-shadow">
+            <Award className="w-10 h-10 mb-2" />
+            <h3 className="text-xl font-bold mb-1">Premium Quality</h3>
+            <p className="text-sm text-green-100">Authentic products guaranteed</p>
+          </div>
+          
+          <div className="bg-gradient-to-r from-purple-500 to-purple-600 rounded-xl p-6 text-white shadow-lg hover:shadow-xl transition-shadow">
+            <TrendingUp className="w-10 h-10 mb-2" />
+            <h3 className="text-xl font-bold mb-1">Earn Points</h3>
+            <p className="text-sm text-purple-100">Get 5 points with every purchase</p>
+          </div>
+        </div>
+
+        {/* ENHANCED SLIDESHOW */}
+        {/* <div className="max-w-6xl mx-auto my-8">
+          <Slideshow images={slideshowData.map(s => s.image)} />
+        </div> */}
+
+        {/* CATEGORY FILTER WITH COUNT */}
+        <div className="flex flex-wrap justify-center gap-3 py-6">
+          {categories.map((cat) => {
+            const count = cat === "All" 
+              ? products.length 
+              : products.filter(p => p.category === cat).length;
+            
+            return (
+              <button
+                key={cat}
+                onClick={() => setSelectedCategory(cat)}
+                className={`px-5 py-2.5 rounded-lg font-medium transition-all shadow-sm flex items-center gap-2 ${
+                  selectedCategory === cat
+                    ? "bg-blue-600 text-white scale-105 shadow-md"
+                    : "bg-white text-gray-700 hover:bg-gray-50 border border-gray-200"
+                }`}
+              >
+                <span>{cat}</span>
+                <span className={`text-xs px-2 py-0.5 rounded-full ${
+                  selectedCategory === cat 
+                    ? "bg-blue-500" 
+                    : "bg-gray-100"
+                }`}>
+                  {count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* RESULTS INFO & VIEW TOGGLE */}
+        <div className="flex justify-between items-center mb-6">
+          <div className="text-gray-600">
+            Showing <span className="font-semibold text-gray-900">{currentProducts.length}</span> of{" "}
+            <span className="font-semibold text-gray-900">{filteredProducts.length}</span> products
+          </div>
+          
+          <div className="flex gap-2">
             <button
-              key={cat}
-              onClick={() => setSelectedCategory(cat)}
-              className={`px-4 py-2 rounded-lg font-medium transition-all shadow-sm ${
-                selectedCategory === cat
-                  ? "bg-blue-600 text-white scale-105"
+              onClick={() => setViewMode("grid")}
+              className={`px-4 py-2 rounded-lg transition-colors ${
+                viewMode === "grid"
+                  ? "bg-blue-600 text-white"
                   : "bg-gray-100 text-gray-600 hover:bg-gray-200"
               }`}
             >
-              {cat}
+              Grid
             </button>
-          ))}
+            <button
+              onClick={() => setViewMode("list")}
+              className={`px-4 py-2 rounded-lg transition-colors ${
+                viewMode === "list"
+                  ? "bg-blue-600 text-white"
+                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+              }`}
+            >
+              List
+            </button>
+          </div>
         </div>
 
-        {/* SLIDESHOW */}
-        <div className="max-w-5xl mx-auto my-8">
-          <Slideshow images={slideshowImages} />
-        </div>
-
-        {/* PRODUCT GRID */}
+        {/* PRODUCT GRID/LIST */}
         {currentProducts.length ? (
-          <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
+          <ul className={viewMode === "grid" 
+            ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6"
+            : "flex flex-col gap-4"
+          }>
             {currentProducts.map((p) => (
               <li
                 key={p.id}
-                className="bg-white rounded-xl shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden border border-gray-100"
+                className={`bg-white rounded-xl shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden border border-gray-100 ${
+                  viewMode === "list" ? "flex" : ""
+                }`}
               >
                 <Link
                   href={`/products/${p.id}`}
-                  className="block relative overflow-hidden bg-gray-50 aspect-square"
+                  className={`relative overflow-hidden bg-gray-50 ${
+                    viewMode === "grid" 
+                      ? "block aspect-square" 
+                      : "w-48 h-48 flex-shrink-0"
+                  }`}
                 >
                   <img
                     src={p.image || p.imageUrl}
@@ -150,43 +238,79 @@ export default function ProductList() {
                       {p.category}
                     </span>
                   )}
+                  {p.stock <= 5 && p.stock > 0 && (
+                    <span className="absolute top-2 right-2 bg-orange-500 text-white text-xs px-2 py-1 rounded-md font-medium">
+                      Only {p.stock} left
+                    </span>
+                  )}
+                  {p.stock === 0 && (
+                    <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                      <span className="bg-red-500 text-white px-4 py-2 rounded-lg font-semibold">
+                        Out of Stock
+                      </span>
+                    </div>
+                  )}
                 </Link>
 
-                <div className="p-4">
-                  <h2 className="text-base font-semibold text-gray-900 mb-1 line-clamp-2 min-h-[3rem]">
-                    {p.title || p.name}
-                  </h2>
+                <div className={`p-4 ${viewMode === "list" ? "flex-1 flex flex-col justify-between" : ""}`}>
+                  <div>
+                    <h2 className={`font-semibold text-gray-900 mb-1 ${
+                      viewMode === "grid" ? "text-base line-clamp-2 min-h-[3rem]" : "text-lg"
+                    }`}>
+                      {p.title || p.name}
+                    </h2>
 
-                  <p className="text-sm text-gray-600 mb-3 line-clamp-2">
-                    {p.description}
-                  </p>
+                    <p className={`text-sm text-gray-600 mb-3 ${
+                      viewMode === "grid" ? "line-clamp-2" : "line-clamp-3"
+                    }`}>
+                      {p.description || "No description available"}
+                    </p>
+                  </div>
 
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-xl font-bold text-indigo-600">
-                      ${p.price}
-                    </span>
+                  <div className={`flex items-center ${
+                    viewMode === "list" ? "justify-between" : "justify-between"
+                  } gap-2`}>
+                    <div>
+                      <span className="text-xl font-bold text-indigo-600">
+                        ${p.price}
+                      </span>
+                      {p.stock > 0 && (
+                        <p className="text-xs text-gray-500 mt-1">
+                          Stock: {p.stock}
+                        </p>
+                      )}
+                    </div>
 
                     <div className="flex gap-1">
                       <Link
                         href={`/products/${p.id}`}
-                        className="p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all"
+                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all"
                       >
-                        view
+                        View
                       </Link>
 
-                      {carts.find((cart) => cart.productId === p.id) ? (
-                        <button
-                          onClick={(e) => handleAddedBtn(e)}
-                          className="text-sm border px-3 py-3 text-white rounded-xl bg-blue-900 hover:bg-blue-700 transition-all"
-                        >
-                          Added
-                        </button>
+                      {p.stock > 0 ? (
+                        carts.find((cart) => cart.productId === p.id) ? (
+                          <button
+                            onClick={(e) => handleAddedBtn(e)}
+                            className="px-4 py-2 text-white rounded-lg bg-blue-900 hover:bg-blue-700 transition-all"
+                          >
+                            Added
+                          </button>
+                        ) : (
+                          <button
+                            onClick={(e) => handleAddToCart(e, p.id)}
+                            className="px-4 py-2 text-white rounded-lg bg-blue-600 hover:bg-blue-700 transition-all"
+                          >
+                            Add to Cart
+                          </button>
+                        )
                       ) : (
                         <button
-                          onClick={(e) => handleAddToCart(e, p.id)}
-                          className="text-sm border px-3 py-3 text-white rounded-xl bg-blue-600 hover:bg-blue-700 transition-all"
+                          disabled
+                          className="px-4 py-2 text-white rounded-lg bg-gray-400 cursor-not-allowed"
                         >
-                          Add Cart
+                          Unavailable
                         </button>
                       )}
                     </div>
@@ -200,46 +324,48 @@ export default function ProductList() {
             <p className="text-lg font-semibold text-gray-700">
               No products found
             </p>
+            <p className="text-sm text-gray-500 mt-2">
+              Try adjusting your search or filters
+            </p>
           </div>
         )}
 
         {/* PAGINATION */}
-        <div className="flex justify-between items-center mt-6">
-          {/* Page size selection */}
+        <div className="flex justify-between items-center mt-8 mb-8">
           <div>
             <label className="mr-2 text-gray-600">Rows per page:</label>
             <select
               value={pageSize}
               onChange={(e) => {
                 setPageSize(Number(e.target.value));
-                setCurrentPage(1); // reset page
+                setCurrentPage(1);
               }}
-              className="border px-3 py-1 rounded"
+              className="border border-gray-300 px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value={4}>4</option>
-              <option value={6}>6</option>
               <option value={8}>8</option>
+              <option value={12}>12</option>
+              <option value={16}>16</option>
             </select>
           </div>
 
-          {/* Prev / Next */}
           <div className="flex items-center gap-3">
             <button
               onClick={goPrev}
               disabled={currentPage === 1}
-              className="px-4 py-2 bg-gray-200 rounded disabled:opacity-50"
+              className="px-4 py-2 bg-white border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 transition-colors"
             >
               Previous
             </button>
 
-            <span className="text-gray-700">
-              Page {currentPage} of {totalPages}
+            <span className="text-gray-700 font-medium">
+              Page {currentPage} of {totalPages || 1}
             </span>
 
             <button
               onClick={goNext}
               disabled={currentPage === totalPages}
-              className="px-4 py-2 bg-gray-200 rounded disabled:opacity-50"
+              className="px-4 py-2 bg-white border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 transition-colors"
             >
               Next
             </button>

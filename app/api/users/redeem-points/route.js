@@ -1,30 +1,45 @@
 import { NextResponse } from "next/server";
 import { mysqlPool } from "@/utils/db";
 
-// Points redemption configuration
-const POINTS_TO_DOLLAR_RATIO = 10; // 10 points = $1 discount
-
+// POST - Redeem (deduct) points from user
 export async function POST(req) {
   try {
     const { userId, pointsToRedeem } = await req.json();
 
-    if (!userId || !pointsToRedeem) {
+    console.log('🎟️ POST /api/users/redeem-points called:', { userId, pointsToRedeem });
+
+    // Validation
+    if (!userId) {
       return NextResponse.json(
-        { error: "userId and pointsToRedeem are required" },
+        { error: "userId is required" },
+        { status: 400 }
+      );
+    }
+
+    if (pointsToRedeem === undefined || pointsToRedeem === null) {
+      return NextResponse.json(
+        { error: "pointsToRedeem is required" },
+        { status: 400 }
+      );
+    }
+
+    if (typeof pointsToRedeem !== 'number' || isNaN(pointsToRedeem)) {
+      return NextResponse.json(
+        { error: "pointsToRedeem must be a valid number" },
         { status: 400 }
       );
     }
 
     if (pointsToRedeem <= 0) {
       return NextResponse.json(
-        { error: "Points to redeem must be greater than 0" },
+        { error: "pointsToRedeem must be greater than 0" },
         { status: 400 }
       );
     }
 
-    // Get current user points
+    // Get current user
     const [rows] = await mysqlPool.query(
-      "SELECT points FROM users WHERE id = ?",
+      "SELECT id, name, points FROM users WHERE id = ?",
       [userId]
     );
 
@@ -40,13 +55,16 @@ export async function POST(req) {
     // Check if user has enough points
     if (currentPoints < pointsToRedeem) {
       return NextResponse.json(
-        { error: "Insufficient points", currentPoints },
+        { 
+          error: "Insufficient points",
+          currentPoints,
+          requestedPoints: pointsToRedeem,
+          shortfall: pointsToRedeem - currentPoints
+        },
         { status: 400 }
       );
     }
 
-    // Calculate discount amount
-    const discountAmount = pointsToRedeem / POINTS_TO_DOLLAR_RATIO;
     const newPoints = currentPoints - pointsToRedeem;
 
     // Update user points
@@ -55,43 +73,21 @@ export async function POST(req) {
       [newPoints, userId]
     );
 
+    console.log(`✅ Redeemed ${pointsToRedeem} points from ${rows[0].name}: ${currentPoints} → ${newPoints}`);
+
     return NextResponse.json({
       success: true,
-      message: `Redeemed ${pointsToRedeem} points for $${discountAmount.toFixed(2)} discount`,
-      pointsRedeemed: pointsToRedeem,
-      discountAmount: parseFloat(discountAmount.toFixed(2)),
+      message: `Redeemed ${pointsToRedeem} points`,
       newPoints,
       previousPoints: currentPoints,
+      pointsRedeemed: pointsToRedeem,
+      userName: rows[0].name
     });
 
   } catch (err) {
-    console.error("REDEEM POINTS ERROR:", err);
+    console.error("❌ POST /api/users/redeem-points error:", err);
     return NextResponse.json(
-      { error: "Failed to redeem points" },
-      { status: 500 }
-    );
-  }
-}
-
-// GET endpoint to check points value
-export async function GET(req) {
-  try {
-    const { searchParams } = new URL(req.url);
-    const points = parseInt(searchParams.get("points")) || 0;
-
-    const discountAmount = points / POINTS_TO_DOLLAR_RATIO;
-
-    return NextResponse.json({
-      points,
-      discountAmount: parseFloat(discountAmount.toFixed(2)),
-      ratio: POINTS_TO_DOLLAR_RATIO,
-      message: `${POINTS_TO_DOLLAR_RATIO} points = $1 discount`,
-    });
-
-  } catch (err) {
-    console.error("GET POINTS VALUE ERROR:", err);
-    return NextResponse.json(
-      { error: "Failed to calculate points value" },
+      { error: "Failed to redeem points", details: err.message },
       { status: 500 }
     );
   }

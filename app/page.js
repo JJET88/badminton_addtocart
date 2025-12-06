@@ -2,6 +2,7 @@
 import React from 'react'
 import ProductList from '@/components/ProductList'
 import AccessDeny from '@/components/AccessDeny'
+import PurchaseHistory from '@/components/PurchaseHistory'
 
 
 export default function page() {
@@ -9,6 +10,7 @@ export default function page() {
     <div>
       {/* <AccessDeny/> */}
       <ProductList />
+      {/* <PurchaseHistory/> */}
      
     </div>
   )

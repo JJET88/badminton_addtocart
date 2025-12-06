@@ -11,6 +11,7 @@ const showToast = (message, type) => {
 export default function ProductEditForm({ id }) {
   const [form, setForm] = useState({
     title: "",
+    description:"",
     price: "",
     stock: "",
     category: "",
@@ -36,6 +37,7 @@ export default function ProductEditForm({ id }) {
         const data = await res.json();
         setForm({
           title: data.title || "",
+          description: data.description || "",
           price: data.price || "",
           stock: data.stock || "",
           category: data.category || "",
@@ -66,6 +68,7 @@ export default function ProductEditForm({ id }) {
     try {
       const payload = {
         title: form.title,
+        description:form.description,
         price: parseFloat(form.price),
         stock: form.stock,
         category: form.category,
@@ -121,6 +124,20 @@ export default function ProductEditForm({ id }) {
               className="w-full px-4 py-2 border rounded-xl shadow-sm focus:ring-2 focus:ring-blue-400 transition"
             />
           </div>
+          {/* Description */}
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              Description *
+            </label>
+            <textarea
+              name="description"
+              rows="4"
+              placeholder="Describe your product..."
+              value={form.description}
+              onChange={handleChange}
+              className="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 focus:outline-none resize-none transition-all shadow-sm"
+            />
+          </div>
 
           {/* Price & Category */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -149,19 +166,18 @@ export default function ProductEditForm({ id }) {
               />
             </div>
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1">Category</label>
-              <select
+              <label className="block text-sm font-semibold text-gray-700 mb-1">
+                Category
+              </label>
+              <input
                 name="category"
+              type="text"
+              placeholder="Product title"
                 value={form.category}
                 onChange={handleChange}
                 required
                 className="w-full px-4 py-2 border rounded-xl shadow-sm focus:ring-2 focus:ring-blue-400 transition"
-              >
-                <option value="">-- Select Category --</option>
-                <option value="Badminton Racket">Badminton Racket</option>
-                <option value="Shoes">Shoes</option>
-                <option value="Bags">Bags</option>
-              </select>
+              />
             </div>
           </div>
 

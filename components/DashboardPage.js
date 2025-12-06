@@ -81,7 +81,7 @@ export default function Dashboard() {
         <div className="p-5 border rounded-xl shadow-sm bg-white">
           <p className="text-sm text-gray-500">Total Revenue</p>
           <p className="text-3xl font-bold">
-            ฿ {totalRevenue.toLocaleString()}
+            $ {totalRevenue.toLocaleString()}
           </p>
         </div>
 

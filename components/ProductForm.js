@@ -11,6 +11,7 @@ const showToast = (message, type) => {
 export default function ProductForm({ productId }) {
   const [form, setForm] = useState({
     title: "",
+    description:"",
     price: "",
     stock: "",
     category: "",
@@ -34,6 +35,7 @@ export default function ProductForm({ productId }) {
       .then((data) => {
         setForm({
           title: data.title || "",
+          description:data.description || "",
           price: data.price?.toString() || "",
           stock: data.stock?.toString() || "",
           category: data.category || "",
@@ -61,6 +63,7 @@ export default function ProductForm({ productId }) {
     try {
       const payload = {
         title: form.title,
+        description:form.description,
         price: form.price ? parseFloat(form.price) : 0,
         stock: form.stock ? parseInt(form.stock, 10) : 0,
         category: form.category,
@@ -122,6 +125,20 @@ export default function ProductForm({ productId }) {
               onChange={handleChange}
               required
               className="w-full px-4 py-2 border rounded-xl shadow-sm focus:ring-2 focus:ring-blue-400 transition"
+            />
+          </div>
+          {/* Description */}
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              Description *
+            </label>
+            <textarea
+              name="description"
+              rows="4"
+              placeholder="Describe your product..."
+              value={form.description}
+              onChange={handleChange}
+              className="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 focus:outline-none resize-none transition-all shadow-sm"
             />
           </div>
 
@@ -207,7 +224,7 @@ export default function ProductForm({ productId }) {
           <div className="flex flex-col sm:flex-row gap-3 pt-4">
             <button
               type="button"
-              onClick={() => router.push("/products")}
+              onClick={() => router.push("/dashboard/products")}
               className="flex-1 px-6 py-3 bg-white/70 backdrop-blur-sm text-gray-700 rounded-lg font-semibold hover:bg-white border border-gray-200 transition-all"
             >
               Cancel

@@ -80,14 +80,14 @@ export default function SettingsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="animate-pulse">
-          <div className="bg-white rounded-2xl shadow-lg p-8 w-96">
-            <div className="h-8 bg-gray-200 rounded mb-6"></div>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <div className="animate-pulse w-full max-w-2xl">
+          <div className="bg-white rounded-2xl shadow-lg p-6 sm:p-8">
+            <div className="h-6 sm:h-8 bg-gray-200 rounded mb-6"></div>
             <div className="space-y-4">
-              <div className="h-12 bg-gray-200 rounded"></div>
-              <div className="h-12 bg-gray-200 rounded"></div>
-              <div className="h-12 bg-gray-200 rounded"></div>
+              <div className="h-10 sm:h-12 bg-gray-200 rounded"></div>
+              <div className="h-10 sm:h-12 bg-gray-200 rounded"></div>
+              <div className="h-10 sm:h-12 bg-gray-200 rounded"></div>
             </div>
           </div>
         </div>
@@ -96,13 +96,13 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className=" mx-auto">
-        <h1 className="text-3xl font-bold text-gray-900 mb-6">Settings</h1>
+    <div className="min-h-screen bg-gray-50 p-4 sm:p-6">
+      <div className="max-w-4xl mx-auto">
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-4 sm:mb-6">Settings</h1>
 
         {/* Tabs */}
-        <div className="bg-white rounded-lg shadow mb-6">
-          <div className="flex gap-2 border-b overflow-x-auto">
+        <div className="bg-white rounded-lg shadow mb-4 sm:mb-6">
+          <div className="flex gap-1 sm:gap-2 border-b overflow-x-auto scrollbar-hide">
             {[
               { id: "profile", name: "Profile", icon: "👤" },
               { id: "account", name: "Account", icon: "⚙️" },
@@ -112,13 +112,13 @@ export default function SettingsPage() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2 px-6 py-3 border-b-2 transition-colors whitespace-nowrap ${
+                className={`flex items-center gap-1 sm:gap-2 px-3 sm:px-6 py-2 sm:py-3 border-b-2 transition-colors whitespace-nowrap text-sm sm:text-base ${
                   activeTab === tab.id
                     ? "border-blue-600 text-blue-600"
                     : "border-transparent text-gray-600 hover:text-gray-800"
                 }`}
               >
-                <span>{tab.icon}</span>
+                <span className="text-base sm:text-lg">{tab.icon}</span>
                 <span className="font-medium">{tab.name}</span>
               </button>
             ))}
@@ -126,10 +126,10 @@ export default function SettingsPage() {
 
           {/* Profile Tab */}
           {activeTab === "profile" && (
-            <div className="p-6">
-              <h2 className="text-xl font-bold text-gray-900 mb-6">Profile Information</h2>
+            <div className="p-4 sm:p-6">
+              <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-4 sm:mb-6">Profile Information</h2>
 
-              <div className="space-y-5">
+              <div className="space-y-4 sm:space-y-5">
                 <InputField
                   label="Name"
                   value={user.name}
@@ -146,11 +146,11 @@ export default function SettingsPage() {
                 />
 
                 <div>
-                  <label className="block text-gray-900 font-medium mb-2">Role</label>
+                  <label className="block text-gray-900 font-medium mb-2 text-sm sm:text-base">Role</label>
                   <select
                     value={user.role}
                     onChange={(e) => setUser({ ...user, role: e.target.value })}
-                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                    className="w-full px-3 sm:px-4 py-2 sm:py-3 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 text-sm sm:text-base"
                   >
                     <option value="user">User</option>
                     <option value="admin">Admin</option>
@@ -158,12 +158,12 @@ export default function SettingsPage() {
                 </div>
 
                 <button
-                  className="bg-blue-600 disabled:bg-blue-400 disabled:cursor-not-allowed hover:bg-blue-700 hover:shadow-lg hover:scale-[1.02] active:scale-95 transition-all text-white font-medium px-6 py-3 rounded-lg"
+                  className="w-full sm:w-auto bg-blue-600 disabled:bg-blue-400 disabled:cursor-not-allowed hover:bg-blue-700 hover:shadow-lg hover:scale-[1.02] active:scale-95 transition-all text-white font-medium px-6 py-2.5 sm:py-3 rounded-lg text-sm sm:text-base"
                   onClick={handleSave}
                   disabled={isUpdating}
                 >
                   {isUpdating ? (
-                    <span className="flex items-center gap-2">
+                    <span className="flex items-center justify-center gap-2">
                       <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/>
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
@@ -178,19 +178,19 @@ export default function SettingsPage() {
 
           {/* Account Tab */}
           {activeTab === "account" && (
-            <div className="p-6">
-              <h2 className="text-xl font-bold text-gray-900 mb-6">Account Settings</h2>
+            <div className="p-4 sm:p-6">
+              <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-4 sm:mb-6">Account Settings</h2>
 
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-                <p className="text-sm text-blue-900">
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 sm:p-4 mb-4 sm:mb-6">
+                <p className="text-xs sm:text-sm text-blue-900">
                   <strong>Account ID:</strong> {authUser?.id}
                 </p>
-                <p className="text-sm text-blue-900 mt-1">
+                <p className="text-xs sm:text-sm text-blue-900 mt-1">
                   <strong>Member since:</strong> {new Date(authUser?.created_at || Date.now()).toLocaleDateString()}
                 </p>
               </div>
 
-              <p className="text-gray-600 mb-6">
+              <p className="text-sm sm:text-base text-gray-600 mb-4 sm:mb-6">
                 Manage your account preferences and settings here.
               </p>
 
@@ -202,10 +202,10 @@ export default function SettingsPage() {
 
           {/* Notifications Tab */}
           {activeTab === "notifications" && (
-            <div className="p-6">
-              <h2 className="text-xl font-bold text-gray-900 mb-6">Notifications</h2>
+            <div className="p-4 sm:p-6">
+              <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-4 sm:mb-6">Notifications</h2>
 
-              <div className="space-y-4">
+              <div className="space-y-3 sm:space-y-4">
                 <ToggleItem label="Email notifications for new orders" />
                 <ToggleItem label="Low stock alerts" />
                 <ToggleItem label="Daily sales summary" />
@@ -217,8 +217,8 @@ export default function SettingsPage() {
 
           {/* Security Tab */}
           {activeTab === "security" && (
-            <div className="p-6">
-              <h2 className="text-xl font-bold text-gray-900 mb-6">Security</h2>
+            <div className="p-4 sm:p-6">
+              <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-4 sm:mb-6">Security</h2>
 
               <PasswordChangeForm userId={authUser?.id} />
             </div>
@@ -234,13 +234,13 @@ export default function SettingsPage() {
 function InputField({ label, value, onChange, type = "text", placeholder = "" }) {
   return (
     <div>
-      <label className="block text-gray-900 font-medium mb-2">{label}</label>
+      <label className="block text-gray-900 font-medium mb-2 text-sm sm:text-base">{label}</label>
       <input
         type={type}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 placeholder-gray-400"
+        className="w-full px-3 sm:px-4 py-2 sm:py-3 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 placeholder-gray-400 text-sm sm:text-base"
       />
     </div>
   );
@@ -250,13 +250,14 @@ function ToggleItem({ label }) {
   const [checked, setChecked] = useState(false);
 
   return (
-    <div className="flex items-center justify-between py-3 border-b border-gray-200">
-      <p className="text-gray-900">{label}</p>
+    <div className="flex items-center justify-between py-2 sm:py-3 border-b border-gray-200">
+      <p className="text-gray-900 text-sm sm:text-base pr-4">{label}</p>
       <button
         onClick={() => setChecked(!checked)}
-        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+        className={`relative inline-flex h-6 w-11 flex-shrink-0 items-center rounded-full transition-colors ${
           checked ? 'bg-blue-600' : 'bg-gray-200'
         }`}
+        aria-label={`Toggle ${label}`}
       >
         <span
           className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
@@ -320,7 +321,7 @@ function PasswordChangeForm({ userId }) {
   };
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4 sm:space-y-5">
       <InputField
         label="Current Password"
         type="password"
@@ -344,12 +345,12 @@ function PasswordChangeForm({ userId }) {
       />
 
       <button
-        className="bg-blue-600 disabled:bg-blue-400 disabled:cursor-not-allowed hover:bg-blue-700 hover:shadow-lg hover:scale-[1.02] active:scale-95 transition-all text-white font-medium px-6 py-3 rounded-lg"
+        className="w-full sm:w-auto bg-blue-600 disabled:bg-blue-400 disabled:cursor-not-allowed hover:bg-blue-700 hover:shadow-lg hover:scale-[1.02] active:scale-95 transition-all text-white font-medium px-6 py-2.5 sm:py-3 rounded-lg text-sm sm:text-base"
         onClick={handlePasswordChange}
         disabled={isUpdating}
       >
         {isUpdating ? (
-          <span className="flex items-center gap-2">
+          <span className="flex items-center justify-center gap-2">
             <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/>
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>

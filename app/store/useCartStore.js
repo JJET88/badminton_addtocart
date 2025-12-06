@@ -1,14 +1,18 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import toast from "react-hot-toast";
-import useAuthStore from "./useAuthStore"; // ⭐ IMPORTANT
+import useAuthStore from "./useAuthStore";
+
+// Helper to always convert IDs to numbers
+const toNum = (val) => Number(val);
 
 const useCartStore = create(
   persist(
     (set, get) => ({
+
       carts: [],
 
-      // ⭐ BLOCK if not logged in
+      // ⭐ REQUIRE LOGIN
       ensureLoggedIn: () => {
         const { user } = useAuthStore.getState();
         if (!user) {
@@ -18,74 +22,82 @@ const useCartStore = create(
         return true;
       },
 
-      // Add item to cart
-      addCart: (newCart) => {
-        if (!get().ensureLoggedIn()) return; // ⛔ STOP if not logged in
-        
-        const { carts } = get();
-        const existing = carts.find((c) => c.productId === newCart.productId);
+      // ⭐ ADD TO CART (with ID normalization)
+      addCart: (item) => {
+        if (!get().ensureLoggedIn()) return;
 
-        if (existing) {
+        const normalized = {
+          id: Date.now(),                  // ⭐ generate unique cart id
+          productId: toNum(item.productId),
+          quantity: toNum(item.quantity || 1),
+        };
+
+        const { carts } = get();
+
+        // Prevent duplicate product
+        if (carts.some((c) => toNum(c.productId) === normalized.productId)) {
           toast.error("Item already in cart!");
           return;
         }
 
-        set((state) => ({ carts: [...state.carts, newCart] }));
+        set({ carts: [...carts, normalized] });
         toast.success("Item added to cart!");
       },
 
-      // Update cart quantity
+      // ⭐ UPDATE QUANTITY
       updateCartQuantity: (cartId, quantity) => {
         if (!get().ensureLoggedIn()) return;
 
-        if (quantity < 1) return;
-
         set((state) => ({
           carts: state.carts.map((cart) =>
-            cart.id === cartId ? { ...cart, quantity } : cart
+            toNum(cart.id) === toNum(cartId)
+              ? { ...cart, quantity: toNum(quantity) }
+              : cart
           ),
         }));
       },
 
-      // Increase quantity
+      // ⭐ INCREASE
       increaseQuantity: (cartId) => {
         if (!get().ensureLoggedIn()) return;
 
         set((state) => ({
           carts: state.carts.map((cart) =>
-            cart.id === cartId
+            toNum(cart.id) === toNum(cartId)
               ? { ...cart, quantity: cart.quantity + 1 }
               : cart
           ),
         }));
       },
 
-      // Decrease quantity
+      // ⭐ DECREASE
       decreaseQuantity: (cartId) => {
         if (!get().ensureLoggedIn()) return;
 
         const { carts } = get();
-        const cart = carts.find((c) => c.id === cartId);
+        const cart = carts.find((c) => toNum(c.id) === toNum(cartId));
         if (!cart) return;
 
         if (cart.quantity === 1) {
-          set({ carts: carts.filter((c) => c.id !== cartId) });
+          set({ carts: carts.filter((c) => toNum(c.id) !== toNum(cartId)) });
           toast.success("Item removed from cart!");
         } else {
           set({
             carts: carts.map((c) =>
-              c.id === cartId ? { ...c, quantity: c.quantity - 1 } : c
+              toNum(c.id) === toNum(cartId)
+                ? { ...c, quantity: c.quantity - 1 }
+                : c
             ),
           });
         }
       },
 
-      // Remove item
+      // ⭐ REMOVE
       removeCart: (cartId) => {
         if (!get().ensureLoggedIn()) return;
 
         set((state) => ({
-          carts: state.carts.filter((cart) => cart.id !== cartId),
+          carts: state.carts.filter((cart) => toNum(cart.id) !== toNum(cartId)),
         }));
         toast.success("Item removed from cart!");
       },
@@ -97,27 +109,31 @@ const useCartStore = create(
 
       resetCart: () => set({ carts: [] }),
 
+      // ⭐ TOTAL ITEMS
       getTotalItems: () => {
-        const { carts } = get();
-        return carts.reduce((total, cart) => total + cart.quantity, 0);
+        return get().carts.reduce((t, c) => t + c.quantity, 0);
       },
 
+      // ⭐ TOTAL PRICE (with safe numeric match)
       getTotalPrice: (products) => {
-        const { carts } = get();
-        return carts.reduce((total, cart) => {
-          const product = products.find((p) => p.id === cart.productId);
+        return get().carts.reduce((total, cart) => {
+          const product = products.find(
+            (p) => toNum(p.id) === toNum(cart.productId)
+          );
           return total + (product?.price || 0) * cart.quantity;
         }, 0);
       },
 
       isInCart: (productId) => {
-        const { carts } = get();
-        return carts.some((cart) => cart.productId === productId);
+        return get().carts.some(
+          (cart) => toNum(cart.productId) === toNum(productId)
+        );
       },
 
       getCartItem: (productId) => {
-        const { carts } = get();
-        return carts.find((cart) => cart.productId === productId);
+        return get().carts.find(
+          (cart) => toNum(cart.productId) === toNum(productId)
+        );
       },
 
       updateCart: (cartId, updates) => {
@@ -125,11 +141,14 @@ const useCartStore = create(
 
         set((state) => ({
           carts: state.carts.map((cart) =>
-            cart.id === cartId ? { ...cart, ...updates } : cart
+            toNum(cart.id) === toNum(cartId)
+              ? { ...cart, ...updates }
+              : cart
           ),
         }));
       },
     }),
+
     {
       name: "cart-storage",
       partialize: (state) => ({ carts: state.carts }),

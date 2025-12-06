@@ -21,7 +21,7 @@ export default function CheckoutSection() {
 	const [pointsDiscount, setPointsDiscount] = useState(0);
 	const [pointsError, setPointsError] = useState("");
 
-	const { open, openSection, closeSection } = useToggle();
+	const { open, closeSection } = useToggle();
 	const { carts, clearCart } = useCartStore();
 	const { products, fetchProducts } = useProductStore();
 	const { user, fetchUser } = useAuthStore();
@@ -33,7 +33,6 @@ export default function CheckoutSection() {
 		else if (type === "error") toast.error(message);
 		else toast(message);
 	};
-	
 
 	const paymentMethods = [
 		{
@@ -92,6 +91,9 @@ export default function CheckoutSection() {
 	const afterDiscount = Math.max(0, subtotal - totalDiscount);
 	const tax = afterDiscount * 0.1;
 	const total = afterDiscount + tax;
+
+	// Calculate points to earn: 1 point per $10 spent on final total
+	const pointsToEarn = Math.floor(total / 10);
 
 	// ----- APPLY VOUCHER -----
 	async function applyVoucher() {
@@ -161,9 +163,8 @@ export default function CheckoutSection() {
 
 		const discount = points / POINTS_TO_DOLLAR_RATIO;
 
-		// Don't allow discount to exceed subtotal
 		if (discount > subtotal) {
-			setPointsError(`Maximum ${subtotal * POINTS_TO_DOLLAR_RATIO} points can be used`);
+			setPointsError(`Maximum ${Math.floor(subtotal * POINTS_TO_DOLLAR_RATIO)} points can be used`);
 			return;
 		}
 
@@ -196,23 +197,31 @@ export default function CheckoutSection() {
 	// ----- CONFIRM PAYMENT -----
 	async function confirmPayment() {
 		if (carts.length === 0) {
-			alert("Your cart is empty");
+			showToast("Your cart is empty", "error");
 			return;
 		}
 
-		console.log("🛒 Starting checkout with products:", products.map(p => ({
-			id: p.id,
-			name: p.title || p.name,
-			stock: p.stock,
-			hasStock: p.stock !== undefined
-		})));
+		// Validate stock
+		for (const cart of carts) {
+			const product = products.find((p) => p.id === cart.productId);
+			
+			if (!product) {
+				showToast(`Product not found (ID: ${cart.productId})`, "error");
+				return;
+			}
+
+			if (product.stock < cart.quantity) {
+				showToast(`Insufficient stock for ${product.title}. Available: ${product.stock}`, "error");
+				return;
+			}
+		}
 
 		setLoading(true);
 
 		try {
-			const paymentMethod =
-				paymentMethods.find((m) => m.id === selected)?.name || selected;
+			const paymentMethod = paymentMethods.find((m) => m.id === selected)?.name || selected;
 
+			// Create sale with items
 			const salePayload = {
 				total: parseFloat(total.toFixed(2)),
 				subtotal: parseFloat(subtotal.toFixed(2)),
@@ -220,8 +229,18 @@ export default function CheckoutSection() {
 				discount: parseFloat(totalDiscount.toFixed(2)),
 				paymentType: paymentMethod,
 				voucherCode: appliedVoucher?.code || null,
-				cashierId: user?.id || 1,
+				cashierId: user?.id || null,
+				items: carts.map(cart => {
+					const product = products.find((p) => p.id === cart.productId);
+					return {
+						productId: cart.productId,
+						quantity: cart.quantity,
+						price: product?.price || 0,
+					};
+				})
 			};
+
+			console.log('📤 Creating sale:', salePayload);
 
 			const saleRes = await fetch("/api/sales", {
 				method: "POST",
@@ -229,93 +248,25 @@ export default function CheckoutSection() {
 				body: JSON.stringify(salePayload),
 			});
 
-			if (!saleRes.ok) throw new Error("Failed to create sale");
-
-			const sale = await saleRes.json();
-			const saleId = sale.id;
-
-			// SEND SALE ITEMS AND UPDATE STOCK
-			for (const cart of carts) {
-				const product = products.find((p) => p.id === cart.productId);
-
-				console.log("🔍 Processing cart item:", {
-					cartId: cart.id,
-					productId: cart.productId,
-					productIdType: typeof cart.productId,
-					quantity: cart.quantity,
-					product: product ? {
-						id: product.id,
-						idType: typeof product.id,
-						name: product.title || product.name,
-						currentStock: product.stock,
-						stockType: typeof product.stock
-					} : "NOT FOUND"
-				});
-
-				// ⚠️ TYPE CHECK - This might be the issue!
-				if (!product) {
-					console.error("❌ CRITICAL: Product not found in products array!", {
-						lookingFor: cart.productId,
-						availableIds: products.map(p => ({ id: p.id, type: typeof p.id }))
-					});
-				}
-
-				const itemPayload = {
-					saleId,
-					productId: cart.productId,
-					quantity: cart.quantity,
-					price: product?.price || 0,
-				};
-
-				await fetch("/api/saleitems", {
-					method: "POST",
-					headers: { "Content-Type": "application/json" },
-					body: JSON.stringify(itemPayload),
-				});
-
-				// UPDATE STOCK - reduce by quantity purchased
-				if (product) {
-					const currentStock = parseInt(product.stock) || 0;
-					const purchaseQty = parseInt(cart.quantity) || 0;
-					const newStock = currentStock - purchaseQty;
-					const finalStock = Math.max(0, newStock);
-					
-					console.log(`📦 Attempting to update stock for product ${product.id}:`, {
-						currentStock,
-						purchaseQty,
-						newStock,
-						finalStock,
-						productStockType: typeof product.stock,
-						productStockValue: product.stock
-					});
-					
-					const updatePayload = { stock: finalStock };
-					console.log("📤 Sending payload:", updatePayload);
-					
-					const stockUpdateRes = await fetch(`/api/products/${product.id}`, {
-						method: "PUT",
-						headers: { "Content-Type": "application/json" },
-						body: JSON.stringify(updatePayload),
-					});
-
-					const stockUpdateData = await stockUpdateRes.json();
-					
-					if (stockUpdateRes.ok) {
-						console.log(`✅ Stock updated successfully:`, stockUpdateData);
-					} else {
-						console.error(`❌ Stock update failed (${stockUpdateRes.status}):`, stockUpdateData);
-					}
-				} else {
-					console.error(`❌ Product not found in store for cart item:`, cart);
-				}
+			if (!saleRes.ok) {
+				const errorData = await saleRes.json();
+				console.error('Sale creation failed:', errorData);
+				throw new Error(errorData.error || "Failed to create sale");
 			}
 
-			// ===== HANDLE POINTS =====
+			const sale = await saleRes.json();
+			console.log('✅ Sale created:', sale);
+
+			// Handle points
+			let successMessage = "Payment successful!";
+			
 			if (user?.id) {
 				try {
-					// Deduct redeemed points first
+					// Step 1: Redeem points if user used any
 					if (redeemedPoints > 0) {
-						await fetch("/api/users/redeem-points", {
+						console.log(`🎟️ Redeeming ${redeemedPoints} points...`);
+						
+						const redeemRes = await fetch("/api/users/redeem-points", {
 							method: "POST",
 							headers: { "Content-Type": "application/json" },
 							body: JSON.stringify({
@@ -323,47 +274,79 @@ export default function CheckoutSection() {
 								pointsToRedeem: redeemedPoints,
 							}),
 						});
-					}
 
-					// Then add 5 points for the purchase
-					const pointsRes = await fetch("/api/users/add-points", {
-						method: "POST",
-						headers: { "Content-Type": "application/json" },
-						body: JSON.stringify({
-							userId: user.id,
-							pointsToAdd: 5,
-						}),
-					});
-
-					if (pointsRes.ok) {
-						await fetchUser();
-						if (redeemedPoints > 0) {
-							showToast(`Payment successful! Redeemed ${redeemedPoints} points & earned 5 points! 🎉`, "success");
+						const redeemData = await redeemRes.json();
+						console.log('📥 Redeem response:', redeemData);
+						
+						if (!redeemRes.ok) {
+							console.error('❌ Points redemption failed:', redeemData);
+							throw new Error(redeemData.error || 'Failed to redeem points');
 						} else {
-							showToast("Payment successful! You earned 5 points! 🎉", "success");
+							console.log('✅ Points redeemed successfully:', redeemData);
 						}
-					} else {
-						showToast("Payment successful.", "success");
 					}
+
+					// Step 2: Add earned points from this purchase
+					if (pointsToEarn > 0) {
+						console.log(`⭐ Adding ${pointsToEarn} earned points...`);
+						
+						const addPointsRes = await fetch("/api/users/update-points", {
+							method: "POST",
+							headers: { "Content-Type": "application/json" },
+							body: JSON.stringify({
+								userId: user.id,
+								pointsToAdd: pointsToEarn,
+							}),
+						});
+
+						const addPointsData = await addPointsRes.json();
+						console.log('📥 Add points response:', addPointsData);
+						
+						if (!addPointsRes.ok) {
+							console.error('❌ Points addition failed:', addPointsData);
+							throw new Error(addPointsData.error || 'Failed to add points');
+						} else {
+							console.log('✅ Points added successfully:', addPointsData);
+						}
+					}
+
+					// Step 3: Refresh user data to get updated points
+					await fetchUser();
+					console.log('✅ User data refreshed, new points:', user.points);
+
+					// Build success message
+					if (redeemedPoints > 0 && pointsToEarn > 0) {
+						successMessage = `Payment successful! Redeemed ${redeemedPoints} points & earned ${pointsToEarn} point${pointsToEarn !== 1 ? 's' : ''}! 🎉`;
+					} else if (pointsToEarn > 0) {
+						successMessage = `Payment successful! You earned ${pointsToEarn} point${pointsToEarn !== 1 ? 's' : ''}! 🎉`;
+					} else if (redeemedPoints > 0) {
+						successMessage = `Payment successful! Redeemed ${redeemedPoints} points! 💰`;
+					}
+
 				} catch (pointsErr) {
-					console.error("Failed to handle points:", pointsErr);
-					showToast("Payment successful.", "success");
+					console.error("❌ Points handling error:", pointsErr);
+					// Show the error but don't fail the transaction
+					showToast(`Warning: ${pointsErr.message}`, "error");
+					successMessage = "Payment successful! (Points update failed)";
 				}
-			} else {
-				showToast("Payment successful.", "success");
 			}
 
+			showToast(successMessage, "success");
+
+			// Cleanup
+			await fetchProducts();
 			clearCart();
 			closeSection();
 			removeVoucher();
 			removePoints();
+			
+			router.push(`/products`);
 
 		} catch (err) {
-			console.error("Payment error:", err);
-			showToast("Payment failed!", "error");
+			console.error("❌ Payment error:", err);
+			showToast(err.message || "Payment failed!", "error");
 		} finally {
 			setLoading(false);
-			router.push(`/products`);
 		}
 	}
 
@@ -372,33 +355,29 @@ export default function CheckoutSection() {
 			{/* OVERLAY */}
 			<div
 				className={`fixed inset-0 bg-black/40 backdrop-blur-sm transition-opacity duration-300 z-40 
-            ${
-							open
-								? "opacity-100 pointer-events-auto"
-								: "opacity-0 pointer-events-none"
-						}`}
+					${open ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"}`}
 				onClick={closeSection}
 			></div>
 
 			{/* CHECKOUT DRAWER */}
 			<div
-				className={`fixed top-0 right-0 h-full w-[400px] bg-white shadow-xl z-50 transition-transform duration-500 
-            ease-in-out overflow-y-auto ${
-							open ? "translate-x-0" : "translate-x-full"
-						}`}
+				className={`fixed top-0 right-0 h-full w-full sm:w-[450px] md:w-[500px] bg-white shadow-xl z-50 
+					transition-transform duration-500 ease-in-out overflow-y-auto 
+					${open ? "translate-x-0" : "translate-x-full"}`}
 			>
-				<div className="sticky top-0 bg-white border-b px-6 py-4 flex justify-between">
-					<h2 className="text-xl font-semibold">Checkout</h2>
-					<button onClick={closeSection} className="text-gray-500 text-2xl">
+				{/* HEADER */}
+				<div className="sticky top-0 bg-white border-b px-4 sm:px-6 py-3 sm:py-4 flex justify-between items-center z-10">
+					<h2 className="text-lg sm:text-xl font-semibold">Checkout</h2>
+					<button onClick={closeSection} className="text-gray-500 text-2xl hover:text-gray-700">
 						×
 					</button>
 				</div>
 
-				<div className="p-6 space-y-6">
+				<div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
 					{/* ORDER SUMMARY */}
 					<div>
-						<p className="text-lg font-semibold mb-3">Order Summary</p>
-						<div className="bg-gray-50 rounded-lg p-4 space-y-2">
+						<p className="text-base sm:text-lg font-semibold mb-3">Order Summary</p>
+						<div className="bg-gray-50 rounded-lg p-3 sm:p-4 space-y-2">
 							<div className="flex justify-between text-sm">
 								<span>Subtotal</span>
 								<span>${subtotal.toFixed(2)}</span>
@@ -413,8 +392,8 @@ export default function CheckoutSection() {
 
 							{pointsDiscount > 0 && (
 								<div className="flex justify-between text-sm text-yellow-600">
-									<span>Points Discount ({redeemedPoints} pts)</span>
-									<span>- ${pointsDiscount.toFixed(2)}</span>
+									<span className="truncate mr-2">Points ({redeemedPoints} pts)</span>
+									<span className="whitespace-nowrap">- ${pointsDiscount.toFixed(2)}</span>
 								</div>
 							)}
 
@@ -423,17 +402,33 @@ export default function CheckoutSection() {
 								<span>${tax.toFixed(2)}</span>
 							</div>
 
-							<div className="border-t pt-2 mt-2 flex justify-between font-bold">
+							<div className="border-t pt-2 mt-2 flex justify-between font-bold text-sm sm:text-base">
 								<span>Total</span>
 								<span className="text-green-600">${total.toFixed(2)}</span>
 							</div>
 
 							{/* Points Reward Notice */}
 							{user && (
-								<div className="bg-yellow-50 border border-yellow-200 rounded-lg p-2 mt-3">
-									<p className="text-xs text-yellow-800 text-center">
-										⭐ Earn <span className="font-bold">5 points</span> with this purchase!
-									</p>
+								<div className="bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200 rounded-lg p-2.5 mt-3">
+									{pointsToEarn > 0 ? (
+										<div className="text-center">
+											<p className="text-xs sm:text-sm text-yellow-800 font-medium">
+												⭐ Earn <span className="font-bold text-yellow-900">{pointsToEarn}</span> point{pointsToEarn !== 1 ? 's' : ''} with this purchase!
+											</p>
+											<p className="text-[10px] sm:text-xs mt-1 text-yellow-600">
+												$10 = 1 point • ${total.toFixed(2)} = {pointsToEarn} point{pointsToEarn !== 1 ? 's' : ''}
+											</p>
+										</div>
+									) : (
+										<div className="text-center">
+											<p className="text-xs sm:text-sm text-yellow-800 font-medium">
+												💰 Spend $10 or more to earn points!
+											</p>
+											<p className="text-[10px] sm:text-xs mt-1 text-yellow-600">
+												{total < 10 && `Add $${(10 - total).toFixed(2)} more to earn your first point`}
+											</p>
+										</div>
+									)}
 								</div>
 							)}
 						</div>
@@ -442,24 +437,24 @@ export default function CheckoutSection() {
 					{/* REDEEM POINTS SECTION */}
 					{user && user.points > 0 && (
 						<div>
-							<div className="flex justify-between items-center mb-3">
-								<p className="text-lg font-semibold">Redeem Points</p>
-								<span className="text-sm text-gray-600">
+							<div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-3">
+								<p className="text-base sm:text-lg font-semibold">Redeem Points</p>
+								<span className="text-xs sm:text-sm text-gray-600">
 									You have <span className="font-bold text-yellow-600">{user.points}</span> points
 								</span>
 							</div>
 
 							{redeemedPoints > 0 ? (
-								<div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 flex justify-between items-center">
+								<div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 sm:p-4 flex justify-between items-center">
 									<div>
-										<p className="font-semibold text-yellow-800">
+										<p className="font-semibold text-yellow-800 text-sm sm:text-base">
 											{redeemedPoints} points redeemed
 										</p>
-										<p className="text-sm text-yellow-600">
+										<p className="text-xs sm:text-sm text-yellow-600">
 											${pointsDiscount.toFixed(2)} discount applied
 										</p>
 									</div>
-									<button onClick={removePoints} className="text-red-500 font-medium">
+									<button onClick={removePoints} className="text-red-500 font-medium text-sm">
 										Remove
 									</button>
 								</div>
@@ -470,14 +465,14 @@ export default function CheckoutSection() {
 											type="number"
 											value={pointsToRedeem}
 											onChange={(e) => setPointsToRedeem(e.target.value)}
-											className="flex-1 border rounded-lg px-3 py-2"
-											placeholder={`Enter points (${POINTS_TO_DOLLAR_RATIO} pts = $1)`}
+											className="flex-1 border rounded-lg px-3 py-2 text-sm"
+											placeholder="Enter points"
 											min="0"
 											max={user.points}
 										/>
 										<button
 											onClick={applyPoints}
-											className="bg-yellow-500 text-white px-4 py-2 rounded-lg hover:bg-yellow-600"
+											className="bg-yellow-500 text-white px-3 sm:px-4 py-2 rounded-lg hover:bg-yellow-600 text-sm font-medium whitespace-nowrap"
 										>
 											Apply
 										</button>
@@ -485,13 +480,13 @@ export default function CheckoutSection() {
 
 									<button
 										onClick={useAllPoints}
-										className="mt-2 text-sm text-blue-600 hover:underline"
+										className="mt-2 text-xs sm:text-sm text-blue-600 hover:underline"
 									>
 										Use all available points
 									</button>
 
 									{pointsError && (
-										<p className="text-sm text-red-500 mt-2">{pointsError}</p>
+										<p className="text-xs sm:text-sm text-red-500 mt-2">{pointsError}</p>
 									)}
 
 									<p className="text-xs text-gray-500 mt-2">
@@ -504,22 +499,19 @@ export default function CheckoutSection() {
 
 					{/* PAYMENT METHODS */}
 					<div>
-						<p className="text-lg font-semibold mb-3">Payment Method</p>
-						<div className="grid grid-cols-3 gap-3">
+						<p className="text-base sm:text-lg font-semibold mb-3">Payment Method</p>
+						<div className="grid grid-cols-3 gap-2 sm:gap-3">
 							{paymentMethods.map((m) => (
 								<button
 									key={m.id}
 									onClick={() => setSelected(m.id)}
-									className={`
-                      p-3 rounded-lg border bg-gray-50
-                      ${
-												selected === m.id
-													? "border-green-500 ring-2 ring-green-300"
-													: "border-gray-200"
-											}
-                    `}
+									className={`p-2 sm:p-3 rounded-lg border bg-gray-50 transition-all
+										${selected === m.id
+											? "border-green-500 ring-2 ring-green-300"
+											: "border-gray-200 hover:border-gray-300"
+										}`}
 								>
-									<img src={m.img} alt={m.name} className="h-8 w-auto" />
+									<img src={m.img} alt={m.name} className="h-6 sm:h-8 w-auto mx-auto" />
 								</button>
 							))}
 						</div>
@@ -527,19 +519,19 @@ export default function CheckoutSection() {
 
 					{/* VOUCHER SECTION */}
 					<div>
-						<p className="text-lg font-semibold mb-3">Promo Code</p>
+						<p className="text-base sm:text-lg font-semibold mb-3">Promo Code</p>
 
 						{appliedVoucher ? (
-							<div className="bg-green-50 border border-green-200 rounded-lg p-4 flex justify-between">
+							<div className="bg-green-50 border border-green-200 rounded-lg p-3 sm:p-4 flex justify-between items-center">
 								<div>
-									<p className="font-semibold">{appliedVoucher.code}</p>
-									<p className="text-sm text-green-600">
+									<p className="font-semibold text-sm sm:text-base">{appliedVoucher.code}</p>
+									<p className="text-xs sm:text-sm text-green-600">
 										{appliedVoucher.type === "percentage"
 											? `${appliedVoucher.amount}% off`
 											: `$${appliedVoucher.amount} off`}
 									</p>
 								</div>
-								<button onClick={removeVoucher} className="text-red-500">
+								<button onClick={removeVoucher} className="text-red-500 text-sm font-medium">
 									Remove
 								</button>
 							</div>
@@ -548,21 +540,19 @@ export default function CheckoutSection() {
 								<div className="flex gap-2">
 									<input
 										value={voucherCode}
-										onChange={(e) =>
-											setVoucherCode(e.target.value.toUpperCase())
-										}
-										className="flex-1 border rounded-lg px-3 py-2"
+										onChange={(e) => setVoucherCode(e.target.value.toUpperCase())}
+										className="flex-1 border rounded-lg px-3 py-2 text-sm"
 										placeholder="Enter voucher"
 									/>
 									<button
 										onClick={applyVoucher}
-										className="bg-blue-600 text-white px-4 py-2 rounded-lg"
+										className="bg-blue-600 text-white px-3 sm:px-4 py-2 rounded-lg hover:bg-blue-700 text-sm font-medium whitespace-nowrap"
 									>
 										Apply
 									</button>
 								</div>
 								{voucherError && (
-									<p className="text-sm text-red-500 mt-2">{voucherError}</p>
+									<p className="text-xs sm:text-sm text-red-500 mt-2">{voucherError}</p>
 								)}
 							</>
 						)}
@@ -572,22 +562,19 @@ export default function CheckoutSection() {
 					<button
 						onClick={confirmPayment}
 						disabled={loading}
-						className={`w-full py-3 rounded-lg font-semibold
-                ${
-									loading
-										? "bg-gray-400"
-										: "bg-green-600 text-white hover:bg-green-700"
-								}`}
+						className={`w-full py-3 rounded-lg font-semibold text-sm sm:text-base transition-all
+							${loading
+								? "bg-gray-400 cursor-not-allowed"
+								: "bg-green-600 text-white hover:bg-green-700 active:scale-95"
+							}`}
 					>
-						{loading
-							? "Processing..."
-							: `Confirm Payment ($${total.toFixed(2)})`}
+						{loading ? "Processing..." : `Confirm Payment ($${total.toFixed(2)})`}
 					</button>
 
 					<button
 						onClick={closeSection}
 						disabled={loading}
-						className="w-full bg-gray-200 text-gray-700 py-3 rounded-lg"
+						className="w-full bg-gray-200 text-gray-700 py-3 rounded-lg hover:bg-gray-300 disabled:opacity-50 text-sm sm:text-base font-medium"
 					>
 						Cancel
 					</button>
