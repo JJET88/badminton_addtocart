@@ -1,3 +1,4 @@
+"use client"
 import { useToggle } from "@/context/ToggleContext";
 import useCartStore from "@/app/store/useCartStore";
 import useProductStore from "@/app/store/useProductStore";
