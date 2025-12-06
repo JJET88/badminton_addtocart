@@ -10,16 +10,12 @@ const useAuthStore = create(
       isLoading: false,
       error: null,
 
-      // -----------------------------
-      // SET LOGGED-IN USER
-      // -----------------------------
       setUser: (user) => {
         if (!user) {
           set({ user: null, error: null });
           return;
         }
 
-        // Ensure required fields exist
         const safeUser = {
           ...user,
           points: user?.points ?? 0,
@@ -31,108 +27,33 @@ const useAuthStore = create(
         set({ user: safeUser, error: null });
       },
 
-      // -----------------------------
-      // UPDATE USER (partial update)
-      // Example: updateUser({ points: newPoints })
-      // -----------------------------
       updateUser: (userData) =>
         set((state) => ({
-          user: state.user
-            ? { ...state.user, ...userData }
-            : null,
+          user: state.user ? { ...state.user, ...userData } : null,
         })),
 
-      // -----------------------------
-      // UPDATE ONLY POINTS
-      // Call after successful transaction
-      // -----------------------------
       updatePoints: (newPoints) =>
         set((state) => ({
-          user: state.user
-            ? { ...state.user, points: newPoints }
-            : null,
+          user: state.user ? { ...state.user, points: newPoints } : null,
         })),
 
-      // -----------------------------
-      // CLEAR USER
-      // -----------------------------
       clearUser: () => set({ user: null, error: null }),
-
-      // -----------------------------
-      // SET ERROR
-      // -----------------------------
       setError: (error) => set({ error }),
-
-      // -----------------------------
-      // CLEAR ERROR
-      // -----------------------------
       clearError: () => set({ error: null }),
 
-      // AUTH HELPERS
       isAuthenticated: () => get().user !== null,
       isAdmin: () => get().user?.role === "admin",
       getUserId: () => get().user?.id,
       getUser: () => get().user,
 
-      // -----------------------------
-      // LOADING STATE
-      // -----------------------------
       setLoading: (isLoading) => set({ isLoading }),
 
-      // -----------------------------
-      // FETCH USER FROM /api/auth/me
-      // ALWAYS ensures points default (0)
-      // -----------------------------
-      fetchUser: async () => {
-        try {
-          set({ isLoading: true, error: null });
-
-          const res = await fetch("/api/auth/me", {
-            credentials: "include", // Important for cookies
-          });
-
-          if (!res.ok) {
-            // If 401, user is not authenticated
-            if (res.status === 401) {
-              set({ user: null, isLoading: false, error: null });
-              return null;
-            }
-
-            // Other errors
-            const errorData = await res.json().catch(() => ({}));
-            throw new Error(errorData.error || "Failed to fetch user");
-          }
-
-          const data = await res.json();
-
-          // Validate response structure
-          if (!data.user || !data.user.id) {
-            throw new Error("Invalid user data received");
-          }
-
-          const safeUser = {
-            ...data.user,
-            points: data.user?.points ?? 0,
-            role: data.user?.role || "user",
-          };
-
-          set({ user: safeUser, isLoading: false, error: null });
-          return safeUser;
-
-        } catch (error) {
-          console.error("Fetch user failed:", error);
-          const errorMessage = error.message || "Failed to fetch user";
-          set({ user: null, isLoading: false, error: errorMessage });
-          return null;
-        }
-      },
-
-      // -----------------------------
-      // LOGIN
-      // -----------------------------
+      // FIXED login - works with TiDB
       login: async (credentials) => {
         try {
           set({ isLoading: true, error: null });
+
+          console.log('🔐 Login attempt:', credentials.email);
 
           const res = await fetch("/api/auth/login", {
             method: "POST",
@@ -141,51 +62,153 @@ const useAuthStore = create(
             credentials: "include",
           });
 
+          const data = await res.json();
+          
+          console.log('📥 Login response:', { 
+            status: res.status, 
+            hasUser: !!data.user,
+            data 
+          });
+
           if (!res.ok) {
-            const errorData = await res.json().catch(() => ({}));
-            throw new Error(errorData.error || "Login failed");
+            throw new Error(data.error || "Login failed");
           }
 
-          const data = await res.json();
+          // Validate response - handle both formats
+          let userData;
+          if (data.user) {
+            userData = data.user;
+          } else if (data.id) {
+            // Direct user object
+            userData = data;
+          } else {
+            throw new Error("Invalid user data received from server");
+          }
+
+          if (!userData.id) {
+            throw new Error("User ID missing from response");
+          }
 
           const safeUser = {
-            ...data.user,
-            points: data.user?.points ?? 0,
-            role: data.user?.role || "user",
+            id: userData.id,
+            name: userData.name || 'Unknown',
+            email: userData.email,
+            role: userData.role || "user",
+            points: userData.points ?? 0,
+            created_at: userData.created_at || userData.createdAt,
+            createdAt: userData.createdAt || userData.created_at,
+            updatedAt: userData.updatedAt,
           };
 
+          console.log('✅ Login successful:', safeUser);
           set({ user: safeUser, isLoading: false, error: null });
+          
           return { success: true, user: safeUser };
 
         } catch (error) {
-          console.error("Login failed:", error);
+          console.error("❌ Login failed:", error);
           const errorMessage = error.message || "Login failed";
           set({ user: null, isLoading: false, error: errorMessage });
           return { success: false, error: errorMessage };
         }
       },
 
-      // -----------------------------
-      // LOGOUT
-      // -----------------------------
-      logout: async () => {
+      // Fetch user data by ID (alternative to /api/auth/me)
+      fetchUser: async () => {
+        const currentUser = get().user;
+        
+        if (!currentUser || !currentUser.id) {
+          console.log('ℹ️ No user to fetch');
+          set({ isLoading: false });
+          return null;
+        }
+
         try {
           set({ isLoading: true, error: null });
 
-          const res = await fetch("/api/auth/logout", {
-            method: "POST",
+          console.log('🔄 Fetching user data for ID:', currentUser.id);
+
+          // Use /api/users/[id] instead of /api/auth/me since it doesn't exist
+          const res = await fetch(`/api/users/${currentUser.id}`, {
             credentials: "include",
+            headers: {
+              'Content-Type': 'application/json',
+            },
           });
 
-          // Clear user regardless of API response
-          set({ user: null, isLoading: false, error: null });
+          console.log('📥 Fetch response status:', res.status);
 
-          // Only log error if request failed, but still clear state
-          if (!res.ok) {
-            console.error("Logout API call failed, but user cleared locally");
+          // Handle 404 - user not found
+          if (res.status === 404) {
+            console.log('❌ User not found, clearing session');
+            set({ user: null, isLoading: false, error: null });
+            return null;
           }
 
-          // Redirect to login
+          // Handle other non-ok responses
+          if (!res.ok) {
+            const errorData = await res.json().catch(() => ({ 
+              error: `Server error: ${res.status}` 
+            }));
+            throw new Error(errorData.error || "Failed to fetch user");
+          }
+
+          const data = await res.json();
+          
+          console.log('📥 Received user data:', data);
+
+          // Validate data
+          if (!data || typeof data !== 'object') {
+            throw new Error("Invalid response format");
+          }
+
+          if (!data.id || !data.email) {
+            throw new Error("Missing required user fields (id, email)");
+          }
+
+          const safeUser = {
+            id: data.id,
+            name: data.name || 'Unknown',
+            email: data.email,
+            role: data.role || "user",
+            points: data.points ?? 0,
+            created_at: data.created_at,
+            createdAt: data.created_at,
+            updatedAt: data.updatedAt,
+          };
+
+          console.log('✅ User data updated:', safeUser);
+          set({ user: safeUser, isLoading: false, error: null });
+          
+          return safeUser;
+
+        } catch (error) {
+          console.error("❌ Fetch user failed:", error);
+          const errorMessage = error.message || "Failed to fetch user";
+          set({ isLoading: false, error: errorMessage });
+          // Don't clear user on fetch error, keep existing data
+          return get().user;
+        }
+      },
+
+      logout: async () => {
+        try {
+          set({ isLoading: true, error: null });
+          console.log('👋 Logging out');
+
+          // Try to call logout endpoint if it exists
+          try {
+            await fetch("/api/auth/logout", {
+              method: "POST",
+              credentials: "include",
+            });
+          } catch (err) {
+            // Ignore logout endpoint errors
+            console.log('Logout endpoint not available or failed, clearing locally');
+          }
+
+          set({ user: null, isLoading: false, error: null });
+
           if (typeof window !== "undefined") {
             window.location.href = "/login";
           }
@@ -194,7 +217,6 @@ const useAuthStore = create(
 
         } catch (error) {
           console.error("Logout failed:", error);
-          // Still clear user even if API fails
           set({ user: null, isLoading: false, error: null });
           
           if (typeof window !== "undefined") {
@@ -205,35 +227,47 @@ const useAuthStore = create(
         }
       },
 
-      // -----------------------------
-      // REFRESH USER (silent refetch)
-      // -----------------------------
       refreshUser: async () => {
         const currentUser = get().user;
         if (!currentUser) return null;
 
         try {
-          const res = await fetch("/api/auth/me", {
+          console.log('🔄 Refreshing user data');
+          
+          const res = await fetch(`/api/users/${currentUser.id}`, {
             credentials: "include",
           });
 
           if (!res.ok) {
-            return currentUser; // Keep existing user on error
+            console.log('Failed to refresh, keeping current user data');
+            return currentUser;
           }
 
           const data = await res.json();
+          
+          if (!data || !data.id) {
+            return currentUser;
+          }
+
           const safeUser = {
-            ...data.user,
-            points: data.user?.points ?? 0,
-            role: data.user?.role || "user",
+            id: data.id,
+            name: data.name || currentUser.name,
+            email: data.email,
+            role: data.role || "user",
+            points: data.points ?? 0,
+            created_at: data.created_at,
+            createdAt: data.created_at,
+            updatedAt: data.updatedAt,
           };
 
+          console.log('✅ User refreshed:', safeUser);
           set({ user: safeUser });
+          
           return safeUser;
 
         } catch (error) {
           console.error("Refresh user failed:", error);
-          return currentUser; // Keep existing user on error
+          return currentUser;
         }
       },
     }),
@@ -242,7 +276,6 @@ const useAuthStore = create(
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({ 
         user: state.user,
-        // Don't persist loading or error states
       }),
     }
   )

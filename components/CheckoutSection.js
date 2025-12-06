@@ -195,160 +195,171 @@ export default function CheckoutSection() {
 	}
 
 	// ----- CONFIRM PAYMENT -----
-	async function confirmPayment() {
-		if (carts.length === 0) {
-			showToast("Your cart is empty", "error");
+	// Key part of CheckoutSection.js - replace the confirmPayment function
+
+async function confirmPayment() {
+	if (carts.length === 0) {
+		showToast("Your cart is empty", "error");
+		return;
+	}
+
+	// Validate stock
+	for (const cart of carts) {
+		const product = products.find((p) => p.id === cart.productId);
+		
+		if (!product) {
+			showToast(`Product not found (ID: ${cart.productId})`, "error");
 			return;
 		}
 
-		// Validate stock
-		for (const cart of carts) {
-			const product = products.find((p) => p.id === cart.productId);
-			
-			if (!product) {
-				showToast(`Product not found (ID: ${cart.productId})`, "error");
-				return;
-			}
-
-			if (product.stock < cart.quantity) {
-				showToast(`Insufficient stock for ${product.title}. Available: ${product.stock}`, "error");
-				return;
-			}
-		}
-
-		setLoading(true);
-
-		try {
-			const paymentMethod = paymentMethods.find((m) => m.id === selected)?.name || selected;
-
-			// Create sale with items
-			const salePayload = {
-				total: parseFloat(total.toFixed(2)),
-				subtotal: parseFloat(subtotal.toFixed(2)),
-				tax: parseFloat(tax.toFixed(2)),
-				discount: parseFloat(totalDiscount.toFixed(2)),
-				paymentType: paymentMethod,
-				voucherCode: appliedVoucher?.code || null,
-				cashierId: user?.id || null,
-				items: carts.map(cart => {
-					const product = products.find((p) => p.id === cart.productId);
-					return {
-						productId: cart.productId,
-						quantity: cart.quantity,
-						price: product?.price || 0,
-					};
-				})
-			};
-
-			console.log('📤 Creating sale:', salePayload);
-
-			const saleRes = await fetch("/api/sales", {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify(salePayload),
-			});
-
-			if (!saleRes.ok) {
-				const errorData = await saleRes.json();
-				console.error('Sale creation failed:', errorData);
-				throw new Error(errorData.error || "Failed to create sale");
-			}
-
-			const sale = await saleRes.json();
-			console.log('✅ Sale created:', sale);
-
-			// Handle points
-			let successMessage = "Payment successful!";
-			
-			if (user?.id) {
-				try {
-					// Step 1: Redeem points if user used any
-					if (redeemedPoints > 0) {
-						console.log(`🎟️ Redeeming ${redeemedPoints} points...`);
-						
-						const redeemRes = await fetch("/api/users/redeem-points", {
-							method: "POST",
-							headers: { "Content-Type": "application/json" },
-							body: JSON.stringify({
-								userId: user.id,
-								pointsToRedeem: redeemedPoints,
-							}),
-						});
-
-						const redeemData = await redeemRes.json();
-						console.log('📥 Redeem response:', redeemData);
-						
-						if (!redeemRes.ok) {
-							console.error('❌ Points redemption failed:', redeemData);
-							throw new Error(redeemData.error || 'Failed to redeem points');
-						} else {
-							console.log('✅ Points redeemed successfully:', redeemData);
-						}
-					}
-
-					// Step 2: Add earned points from this purchase
-					if (pointsToEarn > 0) {
-						console.log(`⭐ Adding ${pointsToEarn} earned points...`);
-						
-						const addPointsRes = await fetch("/api/users/update-points", {
-							method: "POST",
-							headers: { "Content-Type": "application/json" },
-							body: JSON.stringify({
-								userId: user.id,
-								pointsToAdd: pointsToEarn,
-							}),
-						});
-
-						const addPointsData = await addPointsRes.json();
-						console.log('📥 Add points response:', addPointsData);
-						
-						if (!addPointsRes.ok) {
-							console.error('❌ Points addition failed:', addPointsData);
-							throw new Error(addPointsData.error || 'Failed to add points');
-						} else {
-							console.log('✅ Points added successfully:', addPointsData);
-						}
-					}
-
-					// Step 3: Refresh user data to get updated points
-					await fetchUser();
-					console.log('✅ User data refreshed, new points:', user.points);
-
-					// Build success message
-					if (redeemedPoints > 0 && pointsToEarn > 0) {
-						successMessage = `Payment successful! Redeemed ${redeemedPoints} points & earned ${pointsToEarn} point${pointsToEarn !== 1 ? 's' : ''}! 🎉`;
-					} else if (pointsToEarn > 0) {
-						successMessage = `Payment successful! You earned ${pointsToEarn} point${pointsToEarn !== 1 ? 's' : ''}! 🎉`;
-					} else if (redeemedPoints > 0) {
-						successMessage = `Payment successful! Redeemed ${redeemedPoints} points! 💰`;
-					}
-
-				} catch (pointsErr) {
-					console.error("❌ Points handling error:", pointsErr);
-					// Show the error but don't fail the transaction
-					showToast(`Warning: ${pointsErr.message}`, "error");
-					successMessage = "Payment successful! (Points update failed)";
-				}
-			}
-
-			showToast(successMessage, "success");
-
-			// Cleanup
-			await fetchProducts();
-			clearCart();
-			closeSection();
-			removeVoucher();
-			removePoints();
-			
-			router.push(`/products`);
-
-		} catch (err) {
-			console.error("❌ Payment error:", err);
-			showToast(err.message || "Payment failed!", "error");
-		} finally {
-			setLoading(false);
+		if (product.stock < cart.quantity) {
+			showToast(`Insufficient stock for ${product.title}. Available: ${product.stock}`, "error");
+			return;
 		}
 	}
+
+	setLoading(true);
+
+	try {
+		const paymentMethod = paymentMethods.find((m) => m.id === selected)?.name || selected;
+
+		// Create sale with items
+		const salePayload = {
+			total: parseFloat(total.toFixed(2)),
+			subtotal: parseFloat(subtotal.toFixed(2)),
+			tax: parseFloat(tax.toFixed(2)),
+			discount: parseFloat(totalDiscount.toFixed(2)),
+			paymentType: paymentMethod,
+			voucherCode: appliedVoucher?.code || null,
+			cashierId: user?.id || null,
+			items: carts.map(cart => {
+				const product = products.find((p) => p.id === cart.productId);
+				return {
+					productId: cart.productId,
+					quantity: cart.quantity,
+					price: product?.price || 0,
+				};
+			})
+		};
+
+		console.log('📤 Creating sale:', salePayload);
+
+		const saleRes = await fetch("/api/sales", {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify(salePayload),
+		});
+
+		if (!saleRes.ok) {
+			const errorData = await saleRes.json();
+			console.error('Sale creation failed:', errorData);
+			throw new Error(errorData.error || "Failed to create sale");
+		}
+
+		const sale = await saleRes.json();
+		console.log('✅ Sale created:', sale);
+
+		// Handle points
+		let successMessage = "Payment successful!";
+		let finalUserData = null;
+		
+		if (user?.id) {
+			try {
+				// Step 1: Redeem points if user used any
+				if (redeemedPoints > 0) {
+					console.log(`🎟️ Redeeming ${redeemedPoints} points...`);
+					
+					const redeemRes = await fetch("/api/users/redeem-points", {
+						method: "POST",
+						headers: { "Content-Type": "application/json" },
+						body: JSON.stringify({
+							userId: user.id,
+							pointsToRedeem: redeemedPoints,
+						}),
+					});
+
+					const redeemData = await redeemRes.json();
+					console.log('📥 Redeem response:', redeemData);
+					
+					if (!redeemRes.ok) {
+						console.error('❌ Points redemption failed:', redeemData);
+						throw new Error(redeemData.error || 'Failed to redeem points');
+					} else {
+						console.log('✅ Points redeemed successfully');
+						finalUserData = redeemData.user;
+					}
+				}
+
+				// Step 2: Add earned points from this purchase
+				if (pointsToEarn > 0) {
+					console.log(`⭐ Adding ${pointsToEarn} earned points...`);
+					
+					const addPointsRes = await fetch("/api/users/update-points", {
+						method: "POST",
+						headers: { "Content-Type": "application/json" },
+						body: JSON.stringify({
+							userId: user.id,
+							pointsToAdd: pointsToEarn,
+						}),
+					});
+
+					const addPointsData = await addPointsRes.json();
+					console.log('📥 Add points response:', addPointsData);
+					
+					if (!addPointsRes.ok) {
+						console.error('❌ Points addition failed:', addPointsData);
+						throw new Error(addPointsData.error || 'Failed to add points');
+					} else {
+						console.log('✅ Points added successfully');
+						finalUserData = addPointsData.user;
+					}
+				}
+
+				// Step 3: Update user in store with final data
+				if (finalUserData) {
+					const { setUser } = useAuthStore.getState();
+					setUser(finalUserData);
+					console.log('✅ User store updated with new points:', finalUserData.points);
+				} else {
+					// Refresh user data if no point transactions
+					await fetchUser();
+					console.log('✅ User data refreshed');
+				}
+
+				// Build success message
+				if (redeemedPoints > 0 && pointsToEarn > 0) {
+					successMessage = `Payment successful! Redeemed ${redeemedPoints} points & earned ${pointsToEarn} point${pointsToEarn !== 1 ? 's' : ''}! 🎉`;
+				} else if (pointsToEarn > 0) {
+					successMessage = `Payment successful! You earned ${pointsToEarn} point${pointsToEarn !== 1 ? 's' : ''}! 🎉`;
+				} else if (redeemedPoints > 0) {
+					successMessage = `Payment successful! Redeemed ${redeemedPoints} points! 💰`;
+				}
+
+			} catch (pointsErr) {
+				console.error("❌ Points handling error:", pointsErr);
+				showToast(`Warning: ${pointsErr.message}`, "error");
+				successMessage = "Payment successful! (Points update failed)";
+			}
+		}
+
+		showToast(successMessage, "success");
+
+		// Cleanup
+		await fetchProducts();
+		clearCart();
+		closeSection();
+		removeVoucher();
+		removePoints();
+		
+		router.push(`/products`);
+
+	} catch (err) {
+		console.error("❌ Payment error:", err);
+		showToast(err.message || "Payment failed!", "error");
+	} finally {
+		setLoading(false);
+	}
+}
 
 	return (
 		<div>

@@ -1,64 +1,115 @@
 import { NextResponse } from "next/server";
-import jwt from "jsonwebtoken";
-import bcrypt from "bcryptjs";
 import { mysqlPool } from "@/utils/db";
+import bcrypt from "bcryptjs";
 
-export async function POST(req) {
+export async function POST(request) {
+  let connection;
+  
   try {
-    const { email, password } = await req.json();
+    const { email, password } = await request.json();
 
+    console.log('🔐 Login attempt for:', email);
+
+    // Validation
     if (!email || !password) {
       return NextResponse.json(
-        { error: "Email and password required" },
+        { error: "Email and password are required" },
         { status: 400 }
       );
     }
 
-    // find user
-    const [rows] = await mysqlPool.query(
-      "SELECT * FROM users WHERE email=?",
-      [email]
+    // Get connection
+    connection = await mysqlPool.getConnection();
+    console.log('✅ Database connection established');
+
+    // Find user by email
+    const [rows] = await connection.query(
+      'SELECT id, name, email, password, role, points FROM users WHERE email = ?',
+      [email.toLowerCase().trim()]
     );
 
+    console.log('📊 Query result:', {
+      found: rows.length > 0,
+      email: email,
+    });
+
     if (rows.length === 0) {
+      console.log('❌ User not found');
       return NextResponse.json(
-        { error: "Invalid credentials" },
-        { status: 400 }
+        { error: "Invalid email or password" },
+        { status: 401 }
       );
     }
 
     const user = rows[0];
+    console.log('👤 User found:', {
+      id: user.id,
+      email: user.email,
+      role: user.role,
+      hasPassword: !!user.password,
+      passwordLength: user.password?.length
+    });
 
-    // compare password
-    const validPass = await bcrypt.compare(password, user.password);
-
-    if (!validPass) {
+    // Verify password
+    let isPasswordValid = false;
+    
+    try {
+      isPasswordValid = await bcrypt.compare(password, user.password);
+      console.log('🔑 Password verification:', isPasswordValid ? '✅ Valid' : '❌ Invalid');
+    } catch (bcryptError) {
+      console.error('❌ Bcrypt comparison error:', bcryptError);
       return NextResponse.json(
-        { error: "Invalid credentials" },
-        { status: 400 }
+        { error: "Password verification failed" },
+        { status: 500 }
       );
     }
 
-    // JWT token
-    const token = jwt.sign(
-      { id: user.id, name: user.name, role: user.role },
-      process.env.JWT_SECRET,
-      { expiresIn: "7d" }
-    );
+    if (!isPasswordValid) {
+      console.log('❌ Password mismatch');
+      return NextResponse.json(
+        { error: "Invalid email or password" },
+        { status: 401 }
+      );
+    }
 
-    const res = NextResponse.json({ message: "Logged in" });
+    // Successful login - return user data (without password)
+    const userData = {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      points: user.points || 0
+    };
 
-    // cookie
-    res.cookies.set("token", token, {
-      httpOnly: true,
-      path: "/",
-      sameSite: "strict",
-      secure: process.env.NODE_ENV === "production",
+    console.log('✅ Login successful:', userData);
+
+    // Store user in session/cookie if needed
+    const response = NextResponse.json({
+      success: true,
+      message: "Login successful",
+      user: userData
     });
 
-    return res;
+    return response;
+
   } catch (err) {
-    console.error("LOGIN ERROR:", err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    console.error('❌ Login error:', {
+      message: err.message,
+      code: err.code,
+      stack: err.stack
+    });
+    
+    return NextResponse.json(
+      { 
+        error: "Login failed", 
+        details: process.env.NODE_ENV === 'development' ? err.message : undefined 
+      },
+      { status: 500 }
+    );
+  } finally {
+    if (connection) {
+      connection.release();
+      console.log('🔌 Connection released');
+    }
   }
 }

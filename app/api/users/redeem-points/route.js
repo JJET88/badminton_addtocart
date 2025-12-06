@@ -1,93 +1,98 @@
+// app/api/users/redeem-points/route.js
 import { NextResponse } from "next/server";
 import { mysqlPool } from "@/utils/db";
 
-// POST - Redeem (deduct) points from user
-export async function POST(req) {
+export async function POST(request) {
   try {
-    const { userId, pointsToRedeem } = await req.json();
+    const { userId, pointsToRedeem } = await request.json();
 
-    console.log('🎟️ POST /api/users/redeem-points called:', { userId, pointsToRedeem });
+    console.log('🎟️ Redeem points request:', { userId, pointsToRedeem });
 
     // Validation
     if (!userId) {
       return NextResponse.json(
-        { error: "userId is required" },
+        { error: "User ID is required" },
         { status: 400 }
       );
     }
 
-    if (pointsToRedeem === undefined || pointsToRedeem === null) {
+    if (!pointsToRedeem || pointsToRedeem <= 0) {
       return NextResponse.json(
-        { error: "pointsToRedeem is required" },
+        { error: "Invalid points amount" },
         { status: 400 }
       );
     }
 
-    if (typeof pointsToRedeem !== 'number' || isNaN(pointsToRedeem)) {
-      return NextResponse.json(
-        { error: "pointsToRedeem must be a valid number" },
-        { status: 400 }
-      );
-    }
-
-    if (pointsToRedeem <= 0) {
-      return NextResponse.json(
-        { error: "pointsToRedeem must be greater than 0" },
-        { status: 400 }
-      );
-    }
+    const points = parseInt(pointsToRedeem);
 
     // Get current user
-    const [rows] = await mysqlPool.query(
-      "SELECT id, name, points FROM users WHERE id = ?",
+    const [userRows] = await mysqlPool.query(
+      'SELECT id, name, email, role, points FROM users WHERE id = ?',
       [userId]
     );
 
-    if (rows.length === 0) {
+    if (userRows.length === 0) {
       return NextResponse.json(
         { error: "User not found" },
         { status: 404 }
       );
     }
 
-    const currentPoints = rows[0].points || 0;
+    const currentPoints = userRows[0].points || 0;
 
     // Check if user has enough points
-    if (currentPoints < pointsToRedeem) {
+    if (currentPoints < points) {
       return NextResponse.json(
         { 
-          error: "Insufficient points",
-          currentPoints,
-          requestedPoints: pointsToRedeem,
-          shortfall: pointsToRedeem - currentPoints
+          error: `Insufficient points. You have ${currentPoints} points but tried to redeem ${points}` 
         },
         { status: 400 }
       );
     }
 
-    const newPoints = currentPoints - pointsToRedeem;
+    const newPoints = currentPoints - points;
+    const discountAmount = points / 10; // 10 points = $1
 
-    // Update user points
+    console.log('📊 Redemption calculation:', {
+      current: currentPoints,
+      redeeming: points,
+      new: newPoints,
+      discount: discountAmount
+    });
+
+    // Deduct points
     await mysqlPool.query(
-      "UPDATE users SET points = ? WHERE id = ?",
+      'UPDATE users SET points = ? WHERE id = ?',
       [newPoints, userId]
     );
 
-    console.log(`✅ Redeemed ${pointsToRedeem} points from ${rows[0].name}: ${currentPoints} → ${newPoints}`);
+    // Fetch updated user
+    const [updatedRows] = await mysqlPool.query(
+      'SELECT id, name, email, role, points FROM users WHERE id = ?',
+      [userId]
+    );
+
+    console.log('✅ Points redeemed:', {
+      user: updatedRows[0].email,
+      oldPoints: currentPoints,
+      newPoints: updatedRows[0].points,
+      discount: `$${discountAmount}`
+    });
 
     return NextResponse.json({
       success: true,
-      message: `Redeemed ${pointsToRedeem} points`,
-      newPoints,
+      message: `Redeemed ${points} points for $${discountAmount.toFixed(2)} discount`,
+      user: updatedRows[0],
       previousPoints: currentPoints,
-      pointsRedeemed: pointsToRedeem,
-      userName: rows[0].name
+      redeemedPoints: points,
+      newPoints: updatedRows[0].points,
+      discountAmount: discountAmount
     });
 
-  } catch (err) {
-    console.error("❌ POST /api/users/redeem-points error:", err);
+  } catch (error) {
+    console.error('❌ Redeem points error:', error);
     return NextResponse.json(
-      { error: "Failed to redeem points", details: err.message },
+      { error: error.message || "Failed to redeem points" },
       { status: 500 }
     );
   }
